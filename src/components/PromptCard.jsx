@@ -49,6 +49,16 @@ export default function PromptCard({ prompt, onSelect, disabled, interviewMode }
               <span className="font-medium text-slate-700">Tip:</span> {prompt.tip}
             </p>
           )}
+          {prompt.trap && (
+            <p className="mt-1 text-sm text-slate-600">
+              <span className="font-medium text-red-600">The trap:</span> {prompt.trap}
+            </p>
+          )}
+          {prompt.avoid && (
+            <p className="mt-1 text-sm text-slate-600">
+              <span className="font-medium text-amber-600">Leave out:</span> {prompt.avoid}
+            </p>
+          )}
 
           <div className="mt-3 border-t border-slate-200 pt-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">

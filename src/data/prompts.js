@@ -1,6 +1,9 @@
 // The most common behavioral interview questions, grouped by competency. Fixed wording so
-// sessions on the same prompt are comparable over time. Each carries `assesses` (what the
-// interviewer is really evaluating) and `tip` (one specific pointer) for prep.
+// sessions on the same prompt are comparable over time. Each carries prep guidance:
+//   assesses — what the interviewer is really evaluating
+//   tip      — one specific pointer
+//   trap     — the common mistake that sinks this answer
+//   avoid    — what to leave out
 
 // A reusable way to think through ANY behavioral answer. Ordered. The outcome-first step
 // is deliberately near the top — burying the result is the most common delivery mistake.
@@ -22,6 +25,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you disagreed with a teammate. What was the situation, what did you do, and how did it turn out?',
     assesses: 'Whether you can disagree without damaging the relationship, and reach a good outcome.',
     tip: 'Show you sought to understand their view first; end on the resolution and what it produced, not the friction.',
+    trap: 'Casting the teammate as the villain and yourself as the one who “won.” It reads as poor collaboration.',
+    avoid: 'Badmouthing them, a blow-by-blow of the argument, or framing it as winning.',
   },
   {
     id: 'conflict-manager',
@@ -29,7 +34,9 @@ export const PROMPTS = [
     label: 'Disagreement with your manager',
     text: "Describe a time you disagreed with your manager's decision. What did you do, and what was the result?",
     assesses: 'Backbone plus judgment — can you push back respectfully and then commit.',
-    tip: 'Lead with the outcome, then how you raised the disagreement with data and disagreed-and-committed.',
+    tip: 'Lead with the outcome, then how you raised it with data and disagreed-and-committed.',
+    trap: 'Sounding either insubordinate or like a pushover who caved the instant you were challenged.',
+    avoid: 'A trivial disagreement, or ending on “they were wrong and I was right.”',
   },
 
   // Failure & mistakes
@@ -40,6 +47,8 @@ export const PROMPTS = [
     text: 'Describe a time a project of yours failed or missed its goal. What happened and what did you learn?',
     assesses: 'Ownership and growth — do you take responsibility and extract a real lesson.',
     tip: 'Own your part without over-apologizing; spend the most time on what you changed afterward.',
+    trap: 'A humble-brag “failure” (“I cared too much”) or blaming the team, market, or bad luck.',
+    avoid: 'Deflecting blame, or a failure with no lesson and no real stake for you.',
   },
   {
     id: 'mistake-owned',
@@ -48,6 +57,8 @@ export const PROMPTS = [
     text: 'Tell me about a significant mistake you made at work. How did you handle it and what changed afterward?',
     assesses: 'Accountability and how you respond under your own error.',
     tip: 'State the impact up front, then the fix and the systemic change so it can’t recur.',
+    trap: 'Picking something trivial to look safe — or something so severe it raises judgment red flags.',
+    avoid: 'Minimizing it, over-apologizing, or shifting blame to others.',
   },
 
   // Leadership & influence
@@ -58,6 +69,8 @@ export const PROMPTS = [
     text: 'Give an example of a time you took the lead on something. What did you do and what was the result?',
     assesses: 'Initiative, coordination, and the scope of impact you can drive.',
     tip: 'Lead with the result and your scope; then how you set direction and unblocked others.',
+    trap: 'Slipping into “we” the whole time so your individual contribution disappears.',
+    avoid: 'Narrating the full project plan, or taking credit for the team’s work.',
   },
   {
     id: 'influence-no-authority',
@@ -66,6 +79,8 @@ export const PROMPTS = [
     text: 'Describe a time you had to influence people or drive a decision without formal authority over them.',
     assesses: 'Persuasion, building coalitions, and earning trust.',
     tip: 'Focus on how you understood their incentives and won them over — name the decision that resulted.',
+    trap: 'Framing influence as “I convinced them I was right” instead of meeting their actual needs.',
+    avoid: 'Making it about being the smartest in the room, or a case where you actually had authority.',
   },
 
   // Teamwork & collaboration
@@ -76,6 +91,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to work closely with someone difficult. How did you make it work?',
     assesses: 'Empathy and professionalism under interpersonal friction.',
     tip: 'Stay generous about the other person; show what you changed in your own approach.',
+    trap: 'Turning it into a character assassination — it tells the interviewer how you’ll talk about them later.',
+    avoid: 'Dwelling on how awful they were, or picking someone you just personally disliked.',
   },
 
   // Ambiguity & decisions
@@ -86,6 +103,8 @@ export const PROMPTS = [
     text: 'Describe a time you had to make an important decision with incomplete information. How did you approach it?',
     assesses: 'Judgment, bias for action, and how you reason under uncertainty.',
     tip: 'Name the result first; then the few signals you weighed and why you decided when you did.',
+    trap: 'Coming across as either frozen (waited for perfect data) or reckless (gut call, no reasoning).',
+    avoid: 'Claiming you had no process, or a decision with no real stakes.',
   },
   {
     id: 'complex-project',
@@ -94,6 +113,8 @@ export const PROMPTS = [
     text: 'Walk me through the most complex or ambiguous project you owned end to end. What made it hard and what did you do?',
     assesses: 'Scope, ownership, and how you break down hard problems.',
     tip: 'Resist narrating every detail — give the outcome, then the 2–3 hardest decisions you made.',
+    trap: 'Drowning the interviewer in architecture and losing the thread of YOUR decisions and impact.',
+    avoid: 'Technical detail for its own sake, and any part you didn’t personally drive.',
   },
 
   // Execution & pressure
@@ -104,6 +125,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to deliver something important under a tight deadline.',
     assesses: 'Prioritization and composure when the clock is against you.',
     tip: 'Lead with whether you delivered; then how you cut scope or sequenced work to get there.',
+    trap: 'Glorifying the all-nighter as the solution instead of the smart prioritization.',
+    avoid: 'Celebrating heroics/crunch, or implying poor planning caused it with no fix.',
   },
   {
     id: 'competing-priorities',
@@ -112,6 +135,8 @@ export const PROMPTS = [
     text: 'Describe a time you had to juggle competing priorities. How did you decide what to do first?',
     assesses: 'Decision-making and how you reason about tradeoffs.',
     tip: 'Make the decision criteria explicit (impact, urgency, who you consulted), not just the busywork.',
+    trap: 'Listing everything you did without ever showing the criteria you used to choose.',
+    avoid: 'A to-do list, or “I just worked harder and did it all.”',
   },
   {
     id: 'initiative-above-beyond',
@@ -120,6 +145,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you went beyond what was expected of you. What drove you and what was the impact?',
     assesses: 'Ownership and intrinsic drive.',
     tip: 'Anchor on the impact; make clear it was self-initiated, not assigned.',
+    trap: 'Picking something that was actually your job, or that created cleanup work for others.',
+    avoid: 'Routine work dressed up, or framing it as ignoring your real responsibilities.',
   },
 
   // Growth & feedback
@@ -130,6 +157,8 @@ export const PROMPTS = [
     text: 'Describe a time you received difficult feedback. How did you respond and what did you change?',
     assesses: 'Self-awareness and coachability.',
     tip: 'Don’t get defensive in the retelling; spend the time on the concrete change you made.',
+    trap: 'Picking feedback you secretly disagreed with — your defensiveness leaks through.',
+    avoid: 'Trivial feedback, or any sign you dismissed it.',
   },
   {
     id: 'feedback-given',
@@ -138,6 +167,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to give critical feedback to a peer or report. How did you handle it?',
     assesses: 'Directness with care, and whether it landed.',
     tip: 'Show you were specific and kind; end with how the person/outcome improved.',
+    trap: 'Coming off as harsh and blunt — or so soft that the message never actually landed.',
+    avoid: 'Making the other person look incompetent, or feedback that wasn’t really received.',
   },
   {
     id: 'learn-fast',
@@ -146,6 +177,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to get up to speed on something unfamiliar very quickly.',
     assesses: 'Learning agility and resourcefulness.',
     tip: 'Lead with what you shipped/achieved; then the method you used to ramp fast.',
+    trap: 'Explaining the topic in depth instead of your method and the outcome.',
+    avoid: 'Lecturing on what you learned, or picking something trivial.',
   },
 
   // Impact
@@ -156,6 +189,8 @@ export const PROMPTS = [
     text: "What's the accomplishment you're most proud of, and what was your specific contribution?",
     assesses: 'What you value, and your real (vs. team) contribution.',
     tip: 'Open with the impact and your specific role; be precise about what was YOURS.',
+    trap: 'A team win where your individual role is fuzzy, or something under-scaled for the role.',
+    avoid: 'Vagueness about what was yours; a purely personal item unless it shows relevant skills.',
   },
   {
     id: 'stakeholder-unhappy',
@@ -164,6 +199,8 @@ export const PROMPTS = [
     text: 'Describe a time you turned around an unhappy customer or stakeholder. What did you do?',
     assesses: 'Composure, empathy, and recovery.',
     tip: 'State where it ended up first (recovered the relationship/deal), then how you got there.',
+    trap: 'Blaming the stakeholder for being unreasonable instead of owning the recovery.',
+    avoid: 'Making them the villain, or skipping how you actually fixed it.',
   },
 
   // Non-technical stakeholders
@@ -174,6 +211,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to explain a complex technical concept or tradeoff to a non-technical audience. How did you get the point across?',
     assesses: 'Communication — translating technical depth into business terms.',
     tip: 'Lead with whether they understood/decided well; then the analogy or framing you used.',
+    trap: 'Re-explaining the tech in depth to the interviewer — which proves you’d do it to the stakeholder too.',
+    avoid: 'Jargon and deep technical detail; focus on the simplification and that it landed.',
   },
   {
     id: 'stakeholder-manage-expectations',
@@ -182,6 +221,8 @@ export const PROMPTS = [
     text: 'Describe a time a non-technical stakeholder expected something that was not feasible (timeline, scope, or cost). How did you handle it?',
     assesses: 'Honesty, framing tradeoffs, and protecting trust.',
     tip: 'Show how you reframed in their terms (cost/risk/value) and offered options, not just “no”.',
+    trap: 'Positioning yourself as the gatekeeper who simply said no.',
+    avoid: 'Being the blocker, or skipping the options/tradeoffs you offered.',
   },
   {
     id: 'stakeholder-say-no',
@@ -190,6 +231,8 @@ export const PROMPTS = [
     text: 'Tell me about a time you had to say no to, or redirect, a request from a business or product stakeholder. How did you keep the relationship intact?',
     assesses: 'Backbone plus diplomacy with cross-functional partners.',
     tip: 'Make the “why” about shared goals; end on the alternative you aligned on.',
+    trap: 'Turning it into engineering-vs-business — or caving entirely to avoid the conflict.',
+    avoid: 'An us-vs-them tone, or omitting how you preserved the relationship.',
   },
   {
     id: 'stakeholder-align',
@@ -198,6 +241,8 @@ export const PROMPTS = [
     text: 'Describe a time you had to align stakeholders from different functions (e.g. product, sales, design) who wanted different things. How did you reach a decision?',
     assesses: 'Facilitation and driving to a decision across competing interests.',
     tip: 'Name the decision and outcome first; then how you surfaced tradeoffs and built consensus.',
+    trap: 'Casting yourself as the one who “decided” without showing how you built buy-in.',
+    avoid: 'Skipping the conflict resolution, or claiming you overruled everyone.',
   },
 ]
 
