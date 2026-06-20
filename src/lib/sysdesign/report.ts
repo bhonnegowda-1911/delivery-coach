@@ -1,4 +1,5 @@
 import { chatStructured } from '../llmClient'
+import { REPORT_MODEL } from '../models'
 import { STAGES, LEVELS, type SysDesignLevel } from '../../data/sysdesign/stages'
 import type { Problem } from '../../data/sysdesign/problems'
 import type { Coverage, Turn } from './conversation'
@@ -223,9 +224,12 @@ export async function generateReport({
   problem,
   stageSessions,
   anthropicKey,
-  model = 'claude-haiku-4-5',
+  model = REPORT_MODEL,
   signal,
 }: GenerateReportArgs): Promise<SysDesignReport> {
+  // No `temperature` here — Opus 4.8 rejects it. Adaptive thinking is the quality lever
+  // instead; it shares the max_tokens budget, so give the JSON report ample headroom
+  // (12K stays under the non-streaming HTTP-timeout threshold, so no streaming needed).
   const { parsed } = await chatStructured<SysDesignReport>({
     provider: 'anthropic',
     model,
@@ -233,7 +237,8 @@ export async function generateReport({
     system: systemPrompt(problem),
     user: buildUserMessage(stageSessions),
     schema: REPORT_SCHEMA,
-    maxTokens: 3800,
+    maxTokens: 12000,
+    thinking: 'adaptive',
     signal,
   })
   return parsed

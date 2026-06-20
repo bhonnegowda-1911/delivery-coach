@@ -39,6 +39,15 @@ export interface ChatStructuredRequest {
   user: string
   schema: JsonSchema
   maxTokens?: number
+  /**
+   * Sampling temperature. Only sent to the API when a number is provided — omit it for
+   * Opus 4.7+/Fable models, which reject the parameter. Pass 0 for deterministic grading.
+   */
+  temperature?: number
+  /** Adaptive thinking (Opus 4.6+/Sonnet 4.6). Lets the model reason before answering. */
+  thinking?: 'adaptive'
+  /** Thinking depth / overall token spend. Defaults to the model's `high` when omitted. */
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
   signal?: AbortSignal
 }
 
@@ -69,18 +78,26 @@ async function chatAnthropic<T>({
   user,
   schema,
   maxTokens = 1500,
+  temperature,
+  thinking,
+  effort,
   signal,
 }: ChatStructuredRequest): Promise<{ parsed: T; raw: AnthropicResponse }> {
   if (!apiKey) throw new LlmError('Missing Anthropic API key.', { code: 'no_key' })
 
-  const body = {
+  const outputConfig: Record<string, unknown> = { format: { type: 'json_schema', schema } }
+  if (effort) outputConfig.effort = effort
+
+  const body: Record<string, unknown> = {
     model,
     max_tokens: maxTokens,
-    temperature: 0, // fixed rubric grading — minimize run-to-run variance
     system,
     messages: [{ role: 'user', content: user }],
-    output_config: { format: { type: 'json_schema', schema } },
+    output_config: outputConfig,
   }
+  // Only send temperature when explicitly given — Opus 4.7+/Fable reject it.
+  if (typeof temperature === 'number') body.temperature = temperature
+  if (thinking) body.thinking = { type: thinking }
 
   let res: Response
   try {

@@ -1,4 +1,5 @@
 import { chatStructured } from '../llmClient'
+import { GRADING_TEMPERATURE } from '../models'
 import { DEFAULT_CRITERIA, type Criteria } from '../../data/criteria'
 import type { AnalyzerContext, FillerResult, LlmAnalyzerResult, StarGrading, Transcript } from '../../types'
 
@@ -56,6 +57,7 @@ export function makeLlmAnalyzer(criteria: Criteria = DEFAULT_CRITERIA) {
         system: criteria.systemPrompt,
         user,
         schema: criteria.schema,
+        temperature: GRADING_TEMPERATURE,
         signal: ctx.signal,
       })
 

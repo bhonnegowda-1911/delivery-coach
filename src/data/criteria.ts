@@ -1,4 +1,5 @@
 import type { JsonSchema } from '../lib/llmClient'
+import { DEFAULT_MODEL } from '../lib/models'
 
 // Grading criteria are DATA, not code. Swapping STAR for PREP/SBI later is a new
 // object here — no analyzer changes. `schema` is a JSON Schema passed to the LLM via
@@ -31,7 +32,7 @@ function beatSchema(description: string): JsonSchema {
 export const STAR_CRITERIA: Criteria = {
   id: 'star',
   label: 'STAR method',
-  model: 'claude-haiku-4-5',
+  model: DEFAULT_MODEL,
   systemPrompt: `You are an expert interview-delivery coach. You grade how well a spoken
 answer follows the STAR method (Situation, Task, Action, Result) and how clear and
 impactful the delivery is.

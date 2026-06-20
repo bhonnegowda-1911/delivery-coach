@@ -1,4 +1,5 @@
 import { chatStructured } from '../llmClient'
+import { DEFAULT_MODEL, GRADING_TEMPERATURE } from '../models'
 import type { Stage } from '../../data/sysdesign/stages'
 import type { Problem } from '../../data/sysdesign/problems'
 
@@ -193,7 +194,7 @@ export async function runStageTurn({
   priorStages = [],
   message,
   anthropicKey,
-  model = 'claude-haiku-4-5',
+  model = DEFAULT_MODEL,
   signal,
 }: RunStageTurnArgs): Promise<StageTurnResult> {
   const { parsed } = await chatStructured<Partial<StageTurnResult>>({
@@ -203,6 +204,7 @@ export async function runStageTurn({
     system: systemPrompt(stage, problem),
     user: buildUserMessage(transcript, message, priorStages),
     schema: TURN_SCHEMA,
+    temperature: GRADING_TEMPERATURE,
     signal,
   })
 

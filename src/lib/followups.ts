@@ -1,10 +1,11 @@
 import { chatStructured } from './llmClient'
+import { DEFAULT_MODEL, GRADING_TEMPERATURE } from './models'
 import type { Transcript } from '../types'
 
 // Real interviewers probe. These two calls simulate that: generate follow-up questions
 // tailored to what the candidate actually said, then briefly assess each spoken response.
 
-const MODEL = 'claude-haiku-4-5'
+const MODEL = DEFAULT_MODEL
 
 export interface Followup {
   question: string
@@ -88,6 +89,7 @@ export async function generateFollowups({
     user,
     schema: GENERATE_SCHEMA,
     maxTokens: 600,
+    temperature: GRADING_TEMPERATURE,
     signal,
   })
   return parsed.followups || []
@@ -123,6 +125,7 @@ export async function assessFollowupAnswer({
     user,
     schema: ASSESS_SCHEMA,
     maxTokens: 400,
+    temperature: GRADING_TEMPERATURE,
     signal,
   })
   return parsed
