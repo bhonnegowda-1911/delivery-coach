@@ -11,6 +11,7 @@ import FollowUps from './components/FollowUps.jsx'
 import FocusTargets from './components/FocusTargets.jsx'
 import RealismChecklist from './components/RealismChecklist.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
+import SystemDesignSession from './components/sysdesign/SystemDesignSession.jsx'
 
 // Session reducer. One in-flight session at a time; the shape is designed to drop into
 // IndexedDB + a history list in Phase 2.
@@ -55,6 +56,7 @@ export default function App() {
   const { anthropicKey, openaiKey, hasAllKeys } = useApiKeys()
   const [state, dispatch] = useReducer(reducer, initialState)
   const [mode, setMode] = useState('audio')
+  const [appMode, setAppMode] = useState('behavioral') // behavioral | sysdesign
   const [promptId, setPromptId] = useState(DEFAULT_PROMPT.id)
   const [interviewMode, setInterviewMode] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -132,24 +134,45 @@ export default function App() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">Delivery Coach</h1>
+            <h1 className="text-lg font-semibold text-slate-900">Interview Coach</h1>
             <p className="text-xs text-slate-500">
-              Record an answer, get graded feedback on structure and delivery.
+              {appMode === 'behavioral'
+                ? 'Record an answer, get graded feedback on structure and delivery.'
+                : 'Work a system-design problem stage by stage, get a leveling read.'}
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="inline-flex rounded-md border border-slate-200 p-0.5 text-sm">
+              {[
+                ['behavioral', 'Behavioral'],
+                ['sysdesign', 'System design'],
+              ].map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setAppMode(m)}
+                  className={`rounded px-3 py-1 ${
+                    appMode === m ? 'bg-indigo-600 text-white' : 'text-slate-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {!hasAllKeys && (
               <span className="hidden text-xs text-amber-600 sm:inline">API keys needed</span>
             )}
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={interviewMode}
-                onChange={(e) => setInterviewMode(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Interview mode
-            </label>
+            {appMode === 'behavioral' && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={interviewMode}
+                  onChange={(e) => setInterviewMode(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                Interview mode
+              </label>
+            )}
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -161,7 +184,11 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-5 px-4 py-6 lg:grid-cols-[1fr_320px]">
+      <main className="mx-auto max-w-5xl px-4 py-6">
+        {appMode === 'sysdesign' ? (
+          <SystemDesignSession onNeedKeys={() => setSettingsOpen(true)} />
+        ) : (
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <PromptCard
             prompt={prompt}
@@ -245,6 +272,8 @@ export default function App() {
         <aside className="space-y-5">
           <FocusTargets session={state.status === 'done' ? state.session : null} />
         </aside>
+        </div>
+        )}
       </main>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
