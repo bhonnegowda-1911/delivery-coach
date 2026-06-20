@@ -3,3 +3,4 @@ dist
 .toolchain
 .DS_Store
 *.local
+*.tsbuildinfo

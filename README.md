@@ -32,7 +32,8 @@ Add your OpenAI and Anthropic API keys in **Settings** after the app loads.
 npm install
 npm run dev        # http://localhost:5173
 npm test           # unit tests for the pure logic
-npm run build
+npm run typecheck  # tsc -b, no emit
+npm run build      # type-checks, then bundles
 ```
 
 > **Note:** if your system Node is broken (Homebrew `icu4c` mismatch), a self-contained
@@ -41,6 +42,7 @@ npm run build
 
 ## Tech
 
-Vite + React, Tailwind CSS, Vitest. Analyzers conform to one interface and the grading
-criteria are data (`src/data/criteria.js`), so swapping STAR for another framework — or the
-LLM provider — needs no UI changes.
+Vite + React + **TypeScript** (strict), Tailwind CSS, Vitest. Shared domain types live in
+`src/types.ts`; system-design types sit next to their modules in `src/{data,lib}/sysdesign`.
+Analyzers conform to one interface and the grading criteria are data (`src/data/criteria.ts`),
+so swapping STAR for another framework — or the LLM provider — needs no UI changes.

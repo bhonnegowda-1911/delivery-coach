@@ -1,0 +1,153 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useApiKeys } from '../../context/ApiKeyContext'
+import { transcribe } from '../../lib/transcribe'
+
+// Text + voice composer for one conversation turn. The candidate can type, or push-to-talk:
+// recording stops -> Whisper transcribes -> text is appended to the textarea so they can
+// edit before sending. Voice and text are one merged answer (not two channels).
+
+interface AnswerComposerProps {
+  onSubmit: (text: string) => void
+  disabled?: boolean
+  placeholder?: string
+}
+
+export default function AnswerComposer({ onSubmit, disabled, placeholder }: AnswerComposerProps) {
+  const { openaiKey } = useApiKeys()
+  const [text, setText] = useState('')
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const startedAtRef = useRef(0)
+
+  useEffect(() => {
+    return () => stopStream()
+  }, [])
+
+  function stopStream() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+  }
+
+  async function startRecording() {
+    setError(null)
+    if (!openaiKey) {
+      setError('Add your OpenAI key in Settings to use voice.')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      const recorder = new MediaRecorder(stream)
+      chunksRef.current = []
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      recorder.onstop = handleStopped
+      recorderRef.current = recorder
+      startedAtRef.current = performance.now()
+      recorder.start()
+      setRecording(true)
+    } catch (e) {
+      setError(
+        (e as Error)?.name === 'NotAllowedError'
+          ? 'Microphone permission denied.'
+          : 'Could not start recording. Check your mic.',
+      )
+      stopStream()
+    }
+  }
+
+  function stopRecording() {
+    setRecording(false)
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop()
+    }
+  }
+
+  async function handleStopped() {
+    const durationSec = (performance.now() - startedAtRef.current) / 1000
+    const blob = new Blob(chunksRef.current, { type: recorderRef.current?.mimeType || 'audio/webm' })
+    stopStream()
+    setTranscribing(true)
+    setError(null)
+    try {
+      const result = await transcribe(blob, { apiKey: openaiKey, fallbackDurationSec: durationSec })
+      const spoken = (result.text || '').trim()
+      if (spoken) setText((prev) => (prev ? `${prev} ${spoken}` : spoken))
+      else setError('No speech detected. Try again or type your answer.')
+    } catch (e) {
+      setError((e as Error)?.message || 'Transcription failed.')
+    } finally {
+      setTranscribing(false)
+    }
+  }
+
+  function handleSend() {
+    const trimmed = text.trim()
+    if (!trimmed || disabled) return
+    onSubmit(trimmed)
+    setText('')
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // Cmd/Ctrl+Enter sends, like most chat composers.
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  const busy = disabled || transcribing
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
+        disabled={busy}
+        rows={3}
+        placeholder={placeholder || 'Type your answer, or use the mic…'}
+        className="w-full resize-y rounded-md border border-slate-200 p-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:bg-slate-50"
+      />
+      {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+      <div className="mt-2 flex items-center gap-2">
+        {!recording ? (
+          <button
+            type="button"
+            onClick={startRecording}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <span className="h-2 w-2 rounded-full bg-red-500" />
+            {transcribing ? 'Transcribing…' : 'Hold the mic'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={stopRecording}
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+          >
+            <span className="h-2 w-2 bg-white" /> Stop & transcribe
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={busy || !text.trim()}
+          className="ml-auto rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+        >
+          Send
+        </button>
+      </div>
+      <p className="mt-1 text-right text-[11px] text-slate-400">⌘/Ctrl + Enter to send</p>
+    </div>
+  )
+}
