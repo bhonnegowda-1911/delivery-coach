@@ -26,8 +26,6 @@ Recorder ─▶ blob (audio|video)
 
 ## Running it
 
-Add your OpenAI and Anthropic API keys in **Settings** after the app loads.
-
 ```bash
 npm install
 npm run dev        # http://localhost:5173
@@ -39,6 +37,26 @@ npm run build      # type-checks, then bundles
 > **Note:** if your system Node is broken (Homebrew `icu4c` mismatch), a self-contained
 > Node is bundled in `.toolchain/` (gitignored). Use the `./dev.sh` wrapper, which puts it
 > first on PATH and forwards to npm: `./dev.sh`, `./dev.sh build`, `./dev.sh test`.
+
+### Running with the backend (durable sessions + media)
+
+Sessions and media (voice recordings, system-design images/video) persist to a backend:
+**Postgres** for structured data + jsonb session payloads, **MinIO** (S3-compatible) for
+binaries, and a small **Node/Express** service that also proxies all LLM calls — so your
+**OpenAI/Anthropic keys now live only on the server**, not in the browser.
+
+```bash
+docker compose up -d                 # Postgres + MinIO (+ Adminer on :8081, MinIO console :9001)
+
+cp server/.env.example server/.env   # then add your ANTHROPIC_API_KEY / OPENAI_API_KEY
+./dev.sh server:install              # install backend deps (one time)
+./dev.sh server                      # API on http://localhost:8787
+
+./dev.sh                             # Vite on http://localhost:5173 (proxies /api → :8787)
+```
+
+The app falls back to its in-browser localStorage cache if the backend is unreachable, but
+durable history and media require the services above.
 
 ## Tech
 

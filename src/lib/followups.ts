@@ -67,12 +67,10 @@ const ASSESS_SCHEMA = {
 export async function generateFollowups({
   question,
   transcript,
-  anthropicKey,
   signal,
 }: {
   question: string
   transcript: Transcript
-  anthropicKey: string
   signal?: AbortSignal
 }): Promise<Followup[]> {
   const user = [
@@ -84,7 +82,6 @@ export async function generateFollowups({
   const { parsed } = await chatStructured<{ followups?: Followup[] }>({
     provider: 'anthropic',
     model: MODEL,
-    apiKey: anthropicKey,
     system: GENERATE_SYSTEM,
     user,
     schema: GENERATE_SCHEMA,
@@ -100,13 +97,11 @@ export async function assessFollowupAnswer({
   mainQuestion,
   followupQuestion,
   transcript,
-  anthropicKey,
   signal,
 }: {
   mainQuestion: string
   followupQuestion: string
   transcript: Transcript
-  anthropicKey: string
   signal?: AbortSignal
 }): Promise<FollowupAssessment> {
   const user = [
@@ -120,7 +115,6 @@ export async function assessFollowupAnswer({
   const { parsed } = await chatStructured<FollowupAssessment>({
     provider: 'anthropic',
     model: MODEL,
-    apiKey: anthropicKey,
     system: ASSESS_SYSTEM,
     user,
     schema: ASSESS_SCHEMA,

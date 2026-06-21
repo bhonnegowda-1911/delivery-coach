@@ -1,6 +1,8 @@
 node_modules
+server/node_modules
 dist
 .toolchain
 .DS_Store
 *.local
+.env
 *.tsbuildinfo

@@ -214,7 +214,6 @@ function buildUserMessage(stageSessions: StageSessionInput[]): string {
 export interface GenerateReportArgs {
   problem: Problem
   stageSessions: StageSessionInput[]
-  anthropicKey: string
   model?: string
   signal?: AbortSignal
 }
@@ -223,7 +222,6 @@ export interface GenerateReportArgs {
 export async function generateReport({
   problem,
   stageSessions,
-  anthropicKey,
   model = REPORT_MODEL,
   signal,
 }: GenerateReportArgs): Promise<SysDesignReport> {
@@ -233,7 +231,6 @@ export async function generateReport({
   const { parsed } = await chatStructured<SysDesignReport>({
     provider: 'anthropic',
     model,
-    apiKey: anthropicKey,
     system: systemPrompt(problem),
     user: buildUserMessage(stageSessions),
     schema: REPORT_SCHEMA,

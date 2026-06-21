@@ -1,0 +1,52 @@
+# Local backing services for the app. Postgres holds structured data + jsonb session payloads;
+# MinIO holds all binaries (recordings, images, video, later resume/JD files). Adminer is an
+# optional DB viewer. The backend (server/) and Vite run on the host via ./dev.sh.
+#
+#   docker compose up -d            # start postgres + minio (+ adminer)
+#   MinIO console: http://localhost:9001  (minioadmin / minioadmin)
+#   Adminer:       http://localhost:8081
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: delivery_coach
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    ports:
+      - '8081:8080'
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+  miniodata:

@@ -36,11 +36,9 @@ interface FollowupRowProps {
   index: number
   followup: Followup
   question: string
-  openaiKey: string
-  anthropicKey: string
 }
 
-function FollowupRow({ index, followup, question, openaiKey, anthropicKey }: FollowupRowProps) {
+function FollowupRow({ index, followup, question }: FollowupRowProps) {
   const [mode, setMode] = useState<RecordMode>('audio')
   const [active, setActive] = useState(false)
   const [state, setState] = useState<RowState>({ status: 'idle' })
@@ -49,14 +47,13 @@ function FollowupRow({ index, followup, question, openaiKey, anthropicKey }: Fol
     setActive(false)
     setState({ status: 'transcribing' })
     try {
-      const t = await transcribe(blob, { apiKey: openaiKey, fallbackDurationSec: durationSec })
+      const { transcript: t } = await transcribe(blob, { fallbackDurationSec: durationSec })
       if (!t.text) throw new Error('No speech detected in that take.')
       setState({ status: 'assessing', transcript: t })
       const assessment = await assessFollowupAnswer({
         mainQuestion: question,
         followupQuestion: followup.question,
         transcript: t,
-        anthropicKey,
       })
       setState({ status: 'done', transcript: t, assessment })
     } catch (e) {
@@ -133,7 +130,7 @@ function FollowupRow({ index, followup, question, openaiKey, anthropicKey }: Fol
 type Phase = 'idle' | 'generating' | 'list' | 'error'
 
 export default function FollowUps({ question, transcript }: { question: string; transcript: Transcript }) {
-  const { openaiKey, anthropicKey, hasAllKeys } = useApiKeys()
+  const { hasAllKeys } = useApiKeys()
   const [phase, setPhase] = useState<Phase>('idle')
   const [followups, setFollowups] = useState<Followup[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -143,7 +140,7 @@ export default function FollowUps({ question, transcript }: { question: string; 
     setPhase('generating')
     setError(null)
     try {
-      const fs = await generateFollowups({ question, transcript, anthropicKey })
+      const fs = await generateFollowups({ question, transcript })
       if (!fs.length) throw new Error('No follow-ups were generated. Try again.')
       setFollowups(fs)
       setPhase('list')
@@ -196,14 +193,7 @@ export default function FollowUps({ question, transcript }: { question: string; 
       {phase === 'list' && (
         <ul className="mt-3 space-y-3">
           {followups.map((f, i) => (
-            <FollowupRow
-              key={i}
-              index={i}
-              followup={f}
-              question={question}
-              openaiKey={openaiKey}
-              anthropicKey={anthropicKey}
-            />
+            <FollowupRow key={i} index={i} followup={f} question={question} />
           ))}
         </ul>
       )}

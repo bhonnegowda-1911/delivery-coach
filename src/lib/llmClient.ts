@@ -1,9 +1,9 @@
-// Provider-agnostic chat wrapper. The grading analyzer talks to this, not to a vendor —
-// swapping providers is a branch here, no UI/analyzer changes. Claude is implemented;
-// the OpenAI adapter slot is left documented and unimplemented (Phase: add when needed).
+// Provider-agnostic chat wrapper. Calls now go through the backend LLM gateway
+// (`/api/llm/chat`) so provider API keys live only on the server, never in the browser.
+// Prompt + schema construction stays here on the client; the gateway just forwards to the
+// provider and returns the parsed structured output.
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
-const ANTHROPIC_VERSION = '2023-06-01'
+const BASE = import.meta.env.VITE_API_BASE ?? ''
 
 export type Provider = 'anthropic' | 'openai'
 
@@ -34,7 +34,6 @@ export type JsonSchema = Record<string, unknown>
 export interface ChatStructuredRequest {
   provider: Provider
   model: string
-  apiKey: string
   system: string
   user: string
   schema: JsonSchema
@@ -56,96 +55,49 @@ interface AnthropicResponse {
   stop_reason?: string
 }
 
-/** Run a single structured-output chat completion. `T` is the expected parsed shape. */
+function codeForStatus(status: number): LlmErrorCode {
+  if (status === 503) return 'no_key'
+  if (status === 401) return 'auth'
+  if (status === 422) return 'refusal'
+  if (status === 429) return 'rate'
+  return 'http'
+}
+
+/** Run a single structured-output chat completion via the backend gateway. */
 export async function chatStructured<T = unknown>(
   req: ChatStructuredRequest,
 ): Promise<{ parsed: T; raw: AnthropicResponse }> {
-  switch (req.provider) {
-    case 'anthropic':
-      return chatAnthropic<T>(req)
-    case 'openai':
-      // Adapter slot — see llmClient OpenAI notes. Not implemented in this POC.
-      throw new LlmError('OpenAI provider is not implemented yet.', { code: 'not_implemented' })
-    default:
-      throw new LlmError(`Unknown provider: ${req.provider}`, { code: 'bad_provider' })
-  }
-}
-
-async function chatAnthropic<T>({
-  model,
-  apiKey,
-  system,
-  user,
-  schema,
-  maxTokens = 1500,
-  temperature,
-  thinking,
-  effort,
-  signal,
-}: ChatStructuredRequest): Promise<{ parsed: T; raw: AnthropicResponse }> {
-  if (!apiKey) throw new LlmError('Missing Anthropic API key.', { code: 'no_key' })
-
-  const outputConfig: Record<string, unknown> = { format: { type: 'json_schema', schema } }
-  if (effort) outputConfig.effort = effort
-
-  const body: Record<string, unknown> = {
-    model,
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: 'user', content: user }],
-    output_config: outputConfig,
-  }
-  // Only send temperature when explicitly given — Opus 4.7+/Fable reject it.
-  if (typeof temperature === 'number') body.temperature = temperature
-  if (thinking) body.thinking = { type: thinking }
-
+  const { signal, ...body } = req
   let res: Response
   try {
-    res = await fetch(ANTHROPIC_URL, {
+    res = await fetch(`${BASE}/api/llm/chat`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': ANTHROPIC_VERSION,
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
       signal,
     })
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e
-    throw new LlmError('Network error reaching Anthropic.', { code: 'network' })
+    throw new LlmError('Network error reaching the analysis service.', { code: 'network' })
   }
 
   if (!res.ok) {
-    if (res.status === 401) throw new LlmError('Invalid Anthropic API key.', { code: 'auth' })
-    if (res.status === 429) throw new LlmError('Anthropic rate limit hit. Wait and retry.', { code: 'rate' })
-    let detail = ''
+    let message = `Analysis failed (${res.status}).`
     try {
-      const err = await res.json()
-      detail = err?.error?.message ? `: ${err.error.message}` : ''
+      const err = (await res.json()) as { error?: string }
+      if (err?.error) message = err.error
     } catch {
-      // ignore parse failure
+      // non-JSON error body
     }
-    throw new LlmError(`Analysis failed (${res.status})${detail}.`, { code: 'http' })
+    throw new LlmError(message, { code: codeForStatus(res.status) })
   }
 
-  const data = (await res.json()) as AnthropicResponse
-  if (data.stop_reason === 'refusal') {
-    throw new LlmError('The model declined to analyze this content.', { code: 'refusal' })
-  }
-
-  const textBlock = (data.content || []).find((b) => b.type === 'text')
-  if (!textBlock?.text) {
-    throw new LlmError('Empty analysis response.', { code: 'empty' })
-  }
-
-  let parsed: T
+  let data: { parsed?: T; raw?: AnthropicResponse }
   try {
-    parsed = JSON.parse(textBlock.text) as T
+    data = (await res.json()) as { parsed?: T; raw?: AnthropicResponse }
   } catch {
     throw new LlmError('Could not parse the analysis response.', { code: 'parse' })
   }
-
-  return { parsed, raw: data }
+  if (data.parsed === undefined) throw new LlmError('Empty analysis response.', { code: 'empty' })
+  return { parsed: data.parsed, raw: data.raw ?? {} }
 }

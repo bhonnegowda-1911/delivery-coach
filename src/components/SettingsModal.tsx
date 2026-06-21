@@ -1,164 +1,65 @@
-import { useState } from 'react'
 import { useApiKeys } from '../context/ApiKeyContext'
 
-const ANTHROPIC_VALIDATE_MODEL = 'claude-haiku-4-5'
+// LLM keys now live on the server (set in server/.env, e.g. ANTHROPIC_API_KEY / OPENAI_API_KEY).
+// This modal is informational: it shows whether the backend is reachable and which providers
+// it has configured, instead of collecting keys in the browser.
 
-interface ValidateResult {
-  ok: boolean
-  message?: string
-}
-
-async function validateOpenai(key: string): Promise<ValidateResult> {
-  const res = await fetch('https://api.openai.com/v1/models', {
-    headers: { Authorization: `Bearer ${key}` },
-  })
-  if (res.ok) return { ok: true }
-  if (res.status === 401) return { ok: false, message: 'Invalid OpenAI key.' }
-  return { ok: false, message: `OpenAI error (${res.status}).` }
-}
-
-async function validateAnthropic(key: string): Promise<ValidateResult> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_VALIDATE_MODEL,
-      max_tokens: 1,
-      messages: [{ role: 'user', content: 'hi' }],
-    }),
-  })
-  if (res.ok) return { ok: true }
-  if (res.status === 401) return { ok: false, message: 'Invalid Anthropic key.' }
-  return { ok: false, message: `Anthropic error (${res.status}).` }
-}
-
-interface KeyFieldProps {
-  label: string
-  hint: string
-  value: string
-  onChange: (value: string) => void
-  onValidate: () => void
-  status: string | null
-}
-
-function KeyField({ label, hint, value, onChange, onValidate, status }: KeyFieldProps) {
+function StatusRow({ label, ok }: { label: string; ok: boolean }) {
   return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-slate-700">{label}</label>
-      <div className="flex gap-2">
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={hint}
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          autoComplete="off"
-          spellCheck={false}
-        />
-        <button
-          type="button"
-          onClick={onValidate}
-          disabled={!value || status === 'checking'}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-        >
-          {status === 'checking' ? 'Checking…' : 'Validate'}
-        </button>
-      </div>
-      {status === 'valid' && <p className="text-sm text-green-600">✓ Key looks valid.</p>}
-      {status && status !== 'checking' && status !== 'valid' && (
-        <p className="text-sm text-red-600">{status}</p>
-      )}
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+      <span className="text-sm text-slate-700">{label}</span>
+      <span className={`text-sm font-medium ${ok ? 'text-green-600' : 'text-red-600'}`}>
+        {ok ? '✓ Configured' : '✗ Missing'}
+      </span>
     </div>
   )
 }
 
 export default function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { openaiKey, anthropicKey, saveKeys } = useApiKeys()
-  const [openaiDraft, setOpenaiDraft] = useState(openaiKey)
-  const [anthropicDraft, setAnthropicDraft] = useState(anthropicKey)
-  const [openaiStatus, setOpenaiStatus] = useState<string | null>(null)
-  const [anthropicStatus, setAnthropicStatus] = useState<string | null>(null)
+  const { loading, online, hasOpenai, hasAnthropic, refresh } = useApiKeys()
 
   if (!open) return null
-
-  async function runValidate(which: 'openai' | 'anthropic') {
-    if (which === 'openai') {
-      setOpenaiStatus('checking')
-      try {
-        const r = await validateOpenai(openaiDraft)
-        setOpenaiStatus(r.ok ? 'valid' : r.message ?? 'OpenAI error.')
-      } catch {
-        setOpenaiStatus('Network error reaching OpenAI.')
-      }
-    } else {
-      setAnthropicStatus('checking')
-      try {
-        const r = await validateAnthropic(anthropicDraft)
-        setAnthropicStatus(r.ok ? 'valid' : r.message ?? 'Anthropic error.')
-      } catch {
-        setAnthropicStatus('Network error reaching Anthropic.')
-      }
-    }
-  }
-
-  function handleSave() {
-    saveKeys({ openaiKey: openaiDraft.trim(), anthropicKey: anthropicDraft.trim() })
-    onClose()
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-slate-900">API keys</h2>
+        <h2 className="text-lg font-semibold text-slate-900">LLM configuration</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Keys are stored only on this device (local storage). Your audio and transcript are
-          sent to OpenAI (transcription) and Anthropic (analysis) when you run a session.
+          API keys live on the server now (set them in <code className="font-mono">server/.env</code>).
+          Your audio and transcript are sent to OpenAI (transcription) and Anthropic (analysis)
+          through the backend when you run a session.
         </p>
 
-        <div className="mt-5 space-y-5">
-          <KeyField
-            label="OpenAI API key (Whisper transcription)"
-            hint="sk-…"
-            value={openaiDraft}
-            onChange={(v) => {
-              setOpenaiDraft(v)
-              setOpenaiStatus(null)
-            }}
-            onValidate={() => runValidate('openai')}
-            status={openaiStatus}
-          />
-          <KeyField
-            label="Anthropic API key (Claude analysis)"
-            hint="sk-ant-…"
-            value={anthropicDraft}
-            onChange={(v) => {
-              setAnthropicDraft(v)
-              setAnthropicStatus(null)
-            }}
-            onValidate={() => runValidate('anthropic')}
-            status={anthropicStatus}
-          />
+        <div className="mt-5 space-y-2">
+          {loading ? (
+            <p className="text-sm text-slate-500">Checking server…</p>
+          ) : !online ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Backend not reachable. Start it with <code className="font-mono">./dev.sh server</code>{' '}
+              (and <code className="font-mono">docker compose up -d</code>).
+            </div>
+          ) : (
+            <>
+              <StatusRow label="OpenAI (Whisper transcription)" ok={hasOpenai} />
+              <StatusRow label="Anthropic (Claude analysis)" ok={hasAnthropic} />
+            </>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            onClick={refresh}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            Cancel
+            Re-check
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={onClose}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
           >
-            Save
+            Close
           </button>
         </div>
       </div>

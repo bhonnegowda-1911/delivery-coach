@@ -124,7 +124,6 @@ export interface AnalyzerContext {
   question: string
   transcript: Transcript
   durationSec: number | null
-  anthropicKey: string
   fillers?: string[]
   filler?: FillerResult
   signal?: AbortSignal

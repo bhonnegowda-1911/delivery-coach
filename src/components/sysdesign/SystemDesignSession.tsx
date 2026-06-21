@@ -1,4 +1,5 @@
-import { useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApiKeys } from '../../context/ApiKeyContext'
 import { getProblem } from '../../data/sysdesign/problems'
 import { STAGES } from '../../data/sysdesign/stages'
@@ -7,37 +8,27 @@ import {
   candidateDecisions,
   type Coverage,
   type PriorStage,
-  type Turn,
 } from '../../lib/sysdesign/conversation'
 import { generateReport, type SysDesignReport as SysDesignReportData, type StageSessionInput } from '../../lib/sysdesign/report'
+import {
+  loadSession,
+  persistSession,
+  sanitize,
+  type Completion,
+  type SessionState as State,
+  type StageSession,
+} from '../../lib/sysdesign/persistence'
+import { saveSession, type SessionRecord } from '../../lib/sessionStore'
+import { uploadAsset, assetUrl } from '../../lib/assetStore'
 import ProblemPicker from './ProblemPicker'
 import StageTracker, { type StageStatus } from './StageTracker'
 import StageConversation from './StageConversation'
 import SysDesignReport from './SysDesignReport'
 
 // Orchestrates a full system-design interview: problem pick → stage-by-stage multi-turn
-// conversation → final leveling report. One in-flight session; shaped to drop into history
-// later (mirrors App.tsx's session reducer).
-
-type Phase = 'pick' | 'interview' | 'reporting' | 'report' | 'error'
-type Completion = 'done' | 'skipped'
-
-interface StageSession {
-  transcript: Turn[]
-  coverage: Coverage | null
-  aligned: boolean
-}
-
-interface State {
-  phase: Phase
-  problemId: string | null
-  currentIndex: number
-  sessions: Record<string, StageSession>
-  completed: Record<string, Completion>
-  thinking: boolean
-  report: SysDesignReportData | null
-  error: string | null
-}
+// conversation → final leveling report. State is mirrored to localStorage (instant resume)
+// and to the backend session store (durable history + cross-device). Candidates can attach
+// images/video (e.g. whiteboard diagrams), stored as assets and referenced by the payload.
 
 type Action =
   | { type: 'START'; problemId: string }
@@ -48,11 +39,15 @@ type Action =
   | { type: 'REPORTING' }
   | { type: 'REPORT_DONE'; report: SysDesignReportData }
   | { type: 'REPORT_ERROR'; error: string }
+  | { type: 'ADD_ATTACHMENT'; assetId: string }
+  | { type: 'HYDRATE'; state: State }
   | { type: 'RESET' }
 
 const emptySession = (): StageSession => ({ transcript: [], coverage: null, aligned: false })
 
 const initialState: State = {
+  id: '',
+  createdAt: 0,
   phase: 'pick',
   problemId: null,
   currentIndex: 0,
@@ -61,6 +56,7 @@ const initialState: State = {
   thinking: false,
   report: null,
   error: null,
+  attachments: [],
 }
 
 function reducer(state: State, action: Action): State {
@@ -68,6 +64,8 @@ function reducer(state: State, action: Action): State {
     case 'START':
       return {
         ...initialState,
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
         phase: 'interview',
         problemId: action.problemId,
         sessions: { [STAGES[0].id]: emptySession() },
@@ -119,6 +117,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, phase: 'report', report: action.report }
     case 'REPORT_ERROR':
       return { ...state, phase: 'interview', error: action.error }
+    case 'ADD_ATTACHMENT':
+      return { ...state, attachments: [...(state.attachments || []), action.assetId] }
+    case 'HYDRATE':
+      return action.state
     case 'RESET':
       return initialState
     default:
@@ -134,11 +136,48 @@ function interviewerText(reply: string, followUps: string[]): string {
 }
 
 export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () => void }) {
-  const { anthropicKey, hasAnthropic } = useApiKeys()
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const { hasAnthropic } = useApiKeys()
+  // Rehydrate any in-progress interview cached on this device for instant resume.
+  const [state, dispatch] = useReducer(reducer, initialState, () => loadSession() ?? initialState)
   const abortRef = useRef<AbortController | null>(null)
+  const location = useLocation()
 
   const problem = state.problemId ? getProblem(state.problemId) : null
+
+  // Reopen a past session passed from History (durable backend copy) via router state.
+  const resume = (location.state as { session?: SessionRecord<State> } | null)?.session
+  useEffect(() => {
+    if (!resume) return
+    const restored = sanitize(resume.payload)
+    if (restored) dispatch({ type: 'HYDRATE', state: restored })
+    window.history.replaceState({}, '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume?.id])
+
+  // Mirror to localStorage (instant cache) on every change; RESET (→ 'pick') clears it.
+  useEffect(() => persistSession(state), [state])
+
+  // Mirror to the durable backend store. Debounce mid-interview chatter; save a finished
+  // report immediately. Nothing to persist on the picker.
+  useEffect(() => {
+    if (state.phase === 'pick' || !state.id) return
+    const record = {
+      id: state.id,
+      kind: 'sysdesign' as const,
+      status: (state.phase === 'report' ? 'completed' : 'in_progress') as 'completed' | 'in_progress',
+      title: problem?.title ?? 'System design',
+      level: state.report?.overall.level ?? null,
+      payload: state,
+    }
+    if (state.phase === 'report') {
+      void saveSession(record)
+      return
+    }
+    const t = setTimeout(() => void saveSession(record), 800)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+
   const stage = STAGES[state.currentIndex]
   const isLastStage = state.currentIndex >= STAGES.length - 1
   const session = stage ? state.sessions[stage.id] || emptySession() : emptySession()
@@ -155,7 +194,6 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
     }
     const stageId = stage.id
     const prior = state.sessions[stageId]?.transcript || []
-    // Give this stage memory of what the candidate decided in earlier stages.
     const priorStages: PriorStage[] = STAGES.slice(0, state.currentIndex)
       .map((s): PriorStage | null => {
         const sess = state.sessions[s.id]
@@ -174,7 +212,6 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
         transcript: prior,
         priorStages,
         message: text,
-        anthropicKey,
         signal: controller.signal,
       })
       dispatch({
@@ -207,7 +244,7 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
         coverage: state.sessions[s.id]?.coverage || null,
         skipped: completed[s.id] === 'skipped',
       }))
-      const report = await generateReport({ problem, stageSessions, anthropicKey, signal: controller.signal })
+      const report = await generateReport({ problem, stageSessions, signal: controller.signal })
       dispatch({ type: 'REPORT_DONE', report })
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') return
@@ -223,6 +260,12 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
     } else {
       dispatch({ type: 'ADVANCE', how })
     }
+  }
+
+  async function handleAttach(file: File) {
+    const kind = file.type.startsWith('video/') ? 'video' : 'image'
+    const uploaded = await uploadAsset(file, { kind, sessionId: state.id, filename: file.name })
+    if (uploaded) dispatch({ type: 'ADD_ATTACHMENT', assetId: uploaded.id })
   }
 
   function handleReset() {
@@ -241,6 +284,7 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
           <div className="text-xs uppercase tracking-wide text-slate-400">Interview report</div>
           <div className="text-base font-semibold text-slate-900">{problem.title}</div>
         </div>
+        <Attachments ids={state.attachments || []} />
         <SysDesignReport report={state.report} onRestart={handleReset} />
       </div>
     )
@@ -257,15 +301,22 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
               <div className="text-xs uppercase tracking-wide text-slate-400">Problem</div>
               <div className="text-sm font-semibold text-slate-900">{problem.title}</div>
             </div>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="shrink-0 rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-            >
-              End interview
-            </button>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                End interview
+              </button>
+              <span className="text-[11px] text-slate-400" title="Saved on this device and to the backend — resumes after a reload or cache clear.">
+                ✓ Progress saved
+              </span>
+            </div>
           </div>
           <p className="mt-2 text-sm text-slate-600">{problem.statement}</p>
+
+          <AttachmentBar ids={state.attachments || []} onAttach={handleAttach} />
         </div>
 
         {state.error && (
@@ -294,6 +345,53 @@ export default function SystemDesignSession({ onNeedKeys }: { onNeedKeys?: () =>
       <aside>
         <StageTracker currentStageId={stage.id} statusById={statusById} />
       </aside>
+    </div>
+  )
+}
+
+// Attachment thumbnails (images render inline; video gets a small player). Read-only.
+function Attachments({ ids }: { ids: string[] }) {
+  if (!ids.length) return null
+  return (
+    <div className="flex flex-wrap gap-2">
+      {ids.map((id) => (
+        <a key={id} href={assetUrl(id)} target="_blank" rel="noreferrer" className="block">
+          <img src={assetUrl(id)} alt="attachment" className="h-20 w-20 rounded-md border border-slate-200 object-cover" />
+        </a>
+      ))}
+    </div>
+  )
+}
+
+// Upload control + thumbnails shown during the interview.
+function AttachmentBar({ ids, onAttach }: { ids: string[]; onAttach: (file: File) => void }) {
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-slate-500">Diagrams / attachments</span>
+        <label className="cursor-pointer rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          + Add image/video
+          <input
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) onAttach(f)
+              e.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {ids.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {ids.map((id) => (
+            <a key={id} href={assetUrl(id)} target="_blank" rel="noreferrer">
+              <img src={assetUrl(id)} alt="attachment" className="h-16 w-16 rounded-md border border-slate-200 object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

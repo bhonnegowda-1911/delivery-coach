@@ -12,7 +12,6 @@ export type PipelineStage = 'fillers' | 'analyzing'
 export interface PipelineInput {
   question: string
   transcript: Transcript
-  anthropicKey: string
   criteria?: Criteria
   fillers?: string[]
   signal?: AbortSignal
@@ -22,7 +21,6 @@ export interface PipelineInput {
 export async function runPipeline({
   question,
   transcript,
-  anthropicKey,
   criteria = DEFAULT_CRITERIA,
   fillers,
   signal,
@@ -32,7 +30,6 @@ export async function runPipeline({
     question,
     transcript,
     durationSec: transcript?.durationSec ?? null,
-    anthropicKey,
     fillers,
     signal,
   }

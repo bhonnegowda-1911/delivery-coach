@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { STAGES, getStage, stageIndex, nextStage, FIRST_STAGE, LEVELS } from '../data/sysdesign/stages'
 import { PROBLEMS, getProblem, DEFAULT_PROBLEM } from '../data/sysdesign/problems'
 import { candidateDecisions, type Turn } from '../lib/sysdesign/conversation'
+import { reviveSession, sanitize, type SessionState } from '../lib/sysdesign/persistence'
 
 describe('system-design stages', () => {
   it('starts at functional requirements and ends at deep dives', () => {
@@ -69,5 +70,59 @@ describe('cross-stage memory', () => {
   it('returns an empty string for an empty or interviewer-only transcript', () => {
     expect(candidateDecisions([])).toBe('')
     expect(candidateDecisions([{ role: 'interviewer', text: 'Hi' }])).toBe('')
+  })
+})
+
+describe('session persistence (resume + hydrate)', () => {
+  const base: SessionState = {
+    id: 'sess-1',
+    createdAt: 1_700_000_000_000,
+    phase: 'interview',
+    problemId: PROBLEMS[0].id,
+    currentIndex: 1,
+    sessions: { [STAGES[0].id]: { transcript: [{ role: 'candidate', text: 'Use REST.' }], coverage: null, aligned: false } },
+    completed: { [STAGES[0].id]: 'done' },
+    thinking: false,
+    report: null,
+    error: null,
+    attachments: ['asset-1'],
+  }
+
+  it('round-trips an in-progress interview (id/attachments preserved)', () => {
+    const revived = reviveSession(JSON.stringify(base))
+    expect(revived?.id).toBe('sess-1')
+    expect(revived?.problemId).toBe(base.problemId)
+    expect(revived?.currentIndex).toBe(1)
+    expect(revived?.sessions[STAGES[0].id].transcript).toHaveLength(1)
+    expect(revived?.completed[STAGES[0].id]).toBe('done')
+    expect(revived?.attachments).toEqual(['asset-1'])
+  })
+
+  it('drops in-flight LLM state so the user lands on something actionable', () => {
+    const revived = reviveSession(JSON.stringify({ ...base, phase: 'reporting', thinking: true, error: 'boom' }))
+    expect(revived?.phase).toBe('interview')
+    expect(revived?.thinking).toBe(false)
+    expect(revived?.error).toBeNull()
+  })
+
+  it('keeps a finished report but falls back to interview if the report is missing', () => {
+    expect(reviveSession(JSON.stringify({ ...base, phase: 'report', report: { foo: 1 } }))?.phase).toBe('report')
+    expect(reviveSession(JSON.stringify({ ...base, phase: 'report', report: null }))?.phase).toBe('interview')
+  })
+
+  it('sanitize hydrates a backend payload and mints an id when one is missing', () => {
+    const { id: _omit, ...noId } = base
+    const restored = sanitize(noId)
+    expect(restored).not.toBeNull()
+    expect(typeof restored?.id).toBe('string')
+    expect(restored?.id.length).toBeGreaterThan(0)
+  })
+
+  it('returns null when there is nothing worth resuming', () => {
+    expect(reviveSession(null)).toBeNull()
+    expect(reviveSession('not json')).toBeNull()
+    expect(sanitize(null)).toBeNull()
+    expect(reviveSession(JSON.stringify({ ...base, problemId: null }))).toBeNull()
+    expect(reviveSession(JSON.stringify({ ...base, currentIndex: 999 }))).toBeNull()
   })
 })

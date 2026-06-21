@@ -181,7 +181,6 @@ export interface RunStageTurnArgs {
   transcript?: Turn[]
   priorStages?: PriorStage[]
   message: string
-  anthropicKey: string
   model?: string
   signal?: AbortSignal
 }
@@ -193,14 +192,12 @@ export async function runStageTurn({
   transcript = [],
   priorStages = [],
   message,
-  anthropicKey,
   model = DEFAULT_MODEL,
   signal,
 }: RunStageTurnArgs): Promise<StageTurnResult> {
   const { parsed } = await chatStructured<Partial<StageTurnResult>>({
     provider: 'anthropic',
     model,
-    apiKey: anthropicKey,
     system: systemPrompt(stage, problem),
     user: buildUserMessage(transcript, message, priorStages),
     schema: TURN_SCHEMA,

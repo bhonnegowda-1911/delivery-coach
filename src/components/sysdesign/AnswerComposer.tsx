@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useApiKeys } from '../../context/ApiKeyContext'
 import { transcribe } from '../../lib/transcribe'
 
+// Voice answers in a system-design turn are transient (transcribed into the textarea, not kept
+// as a recording), so we don't store them as assets — only the transcript text is used.
+
 // Text + voice composer for one conversation turn. The candidate can type, or push-to-talk:
 // recording stops -> Whisper transcribes -> text is appended to the textarea so they can
 // edit before sending. Voice and text are one merged answer (not two channels).
@@ -13,7 +16,7 @@ interface AnswerComposerProps {
 }
 
 export default function AnswerComposer({ onSubmit, disabled, placeholder }: AnswerComposerProps) {
-  const { openaiKey } = useApiKeys()
+  const { hasOpenai } = useApiKeys()
   const [text, setText] = useState('')
   const [recording, setRecording] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
@@ -37,8 +40,8 @@ export default function AnswerComposer({ onSubmit, disabled, placeholder }: Answ
 
   async function startRecording() {
     setError(null)
-    if (!openaiKey) {
-      setError('Add your OpenAI key in Settings to use voice.')
+    if (!hasOpenai) {
+      setError('OpenAI transcription isn’t configured on the server (see Settings).')
       return
     }
     try {
@@ -78,8 +81,8 @@ export default function AnswerComposer({ onSubmit, disabled, placeholder }: Answ
     setTranscribing(true)
     setError(null)
     try {
-      const result = await transcribe(blob, { apiKey: openaiKey, fallbackDurationSec: durationSec })
-      const spoken = (result.text || '').trim()
+      const { transcript } = await transcribe(blob, { fallbackDurationSec: durationSec })
+      const spoken = (transcript.text || '').trim()
       if (spoken) setText((prev) => (prev ? `${prev} ${spoken}` : spoken))
       else setError('No speech detected. Try again or type your answer.')
     } catch (e) {

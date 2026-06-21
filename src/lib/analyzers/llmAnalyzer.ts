@@ -53,7 +53,6 @@ export function makeLlmAnalyzer(criteria: Criteria = DEFAULT_CRITERIA) {
       const { parsed, raw } = await chatStructured<StarGrading>({
         provider: 'anthropic',
         model: criteria.model,
-        apiKey: ctx.anthropicKey,
         system: criteria.systemPrompt,
         user,
         schema: criteria.schema,
