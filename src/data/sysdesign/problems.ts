@@ -409,6 +409,47 @@ export const PROBLEMS: Problem[] = [
       ],
     },
   },
+  {
+    id: 'gpu-workflow-cloud',
+    title: 'Design a cloud service to run GPU workflows (Comfy Cloud)',
+    difficulty: 'Hard',
+    statement:
+      'Design a service that runs user-submitted generative-AI workflows on the cloud (like Comfy Cloud / ComfyUI): a user submits a workflow graph (JSON) plus inputs, it runs on a GPU for up to ~60 minutes, streams progress, and returns outputs (images/video). Users pay only for active GPU time. Workflows can include arbitrary user-supplied (custom-node) code.',
+    hints: {
+      functionalReqs: [
+        'Submit a workflow (graph JSON + input assets) and run it on a GPU',
+        'Track execution status and stream live progress; retrieve outputs when done',
+        'Async, long-running jobs (up to ~60 min); per-tier concurrency (1 active job free, parallel on higher tiers)',
+      ],
+      nonFunctionalReqs: [
+        'GPU is the scarce, EXPENSIVE resource — cost-efficiency is the primary constraint',
+        'Jobs are long-running and bursty; accurate metering of active GPU-seconds for billing',
+        'Untrusted code: custom nodes run arbitrary Python → isolation and multi-tenant blast-radius control',
+        'Realtime progress at low latency; durable outputs; availability of the submit/track API',
+      ],
+      coreEntities: ['User/Tenant', 'Workflow (graph JSON)', 'Job/Run', 'Asset (input/output)', 'GPU Worker', 'UsageEvent'],
+      api: [
+        'POST /jobs (workflow + input refs, idempotency key) → 202 + jobId',
+        'GET /jobs/{id} (status); WebSocket/SSE for live progress; webhook on completion',
+        'Presigned URLs for input upload and output download (don’t stream GB through the API)',
+        'API-key auth, per-tenant rate limits / quotas, pagination',
+      ],
+      deepDives: [
+        'GPU fleet economics: autoscaling + scale-to-zero, warm pools, bin-packing; the cold-start / model-loading problem (tens of GB of weights) and routing jobs to workers that already have the model resident (affinity / local-NVMe cache)',
+        'Untrusted-code isolation: sandbox custom nodes (containers/gVisor, no network, ephemeral FS), resource limits, multi-tenant isolation on shared GPUs',
+        'Long async jobs: durable queue, at-least-once + idempotency (runs are expensive/side-effecting — careful retries), worker crash mid-job, the 60-min timeout',
+        'Metering & billing: capture active GPU-seconds, emit usage events, handle partial/crashed runs, enforce quotas; priority queues per tier with fairness (no tenant starvation)',
+        'Realtime progress fan-out: worker → pub/sub → gateway → client WebSocket (worker isn’t directly connected to the client)',
+        'Output storage + CDN with presigned URLs and retention',
+      ],
+      traps: [
+        'Treating runs as short synchronous requests instead of durable async jobs',
+        'Ignoring that custom nodes are arbitrary code — no isolation story for untrusted execution',
+        'Hand-waving GPU cold starts / model loading, which dominate cost and latency',
+        'Naive auto-retry of a failed job, double-charging or double-running an expensive run (no idempotency)',
+      ],
+    },
+  },
 ]
 
 export const DEFAULT_PROBLEM = PROBLEMS[0]
