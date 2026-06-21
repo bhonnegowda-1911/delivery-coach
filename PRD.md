@@ -10,9 +10,15 @@
 
 ---
 
-## 1. Problem  *(DRAFT — needs your real evidence; see questions below)*
+## 1. Problem
 
-Practicing senior+ interviews solo fails three ways:
+I'm prepping for **learn-and-ship startup backend roles** — concretely, teams
+like Comfy (ComfyUI / Comfy Cloud), whose bar is explicit: *"we care way more
+about your ability to learn and ship than whether you've used these exact
+languages before."* (Stack: Python, Go, Kubernetes, Postgres — but stack-agnostic
+hiring.) The app already carries the "Comfy Cloud" system-design problem.
+
+Practicing for these solo fails three ways:
 1. **No honest signal** — I can't grade my own answer, and friends won't tell me
    I sound like a mid-level engineer.
 2. **Delivery is invisible to me** — I don't hear my own filler, I ramble past
@@ -20,9 +26,10 @@ Practicing senior+ interviews solo fails three ways:
 3. **Each round needs a different muscle** — STAR storytelling, structured
    tradeoff reasoning, and prioritization-under-a-clock don't improve together.
 
-**Evidence (fill in):** which of these have actually bitten me, in which real
-interviews, and which hurt most? This section is worthless until it's grounded in
-something that actually happened.
+**The bar vs. what the app trains:** "learn and ship" is the hiring signal, but
+the modes train the interview *rounds*. Ship is only rehearsed as a *plan* (Build
+mode doesn't run code); **learn** (ramping fast on an unfamiliar codebase) isn't
+trained at all. See open questions §8.
 
 ---
 
@@ -119,6 +126,12 @@ defend is one I should revisit.*
 
 ## 8. Open questions
 
+- **Does the "learn and ship" bar break Build mode's plan-only scope?** If the
+  interview tests *shipping*, is rehearsing only the *plan* enough — or should
+  Build mode actually exercise shipping a slice? (Revisits §6 tradeoff.)
+- **Should there be a "learn" mode?** Nothing trains ramping fast on an
+  unfamiliar codebase / making a change in a large OSS repo (e.g. ComfyUI).
+  Deliberate non-goal, or the next mode?
 - Is "level" one ladder across all three modes, or per-mode?
 - What's a *credible* level signal — how do I trust the LLM's grade enough to act
   on the trend? (calibration / consistency)
