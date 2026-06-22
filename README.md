@@ -1,14 +1,12 @@
 # Delivery Coach
 
-A personal, single-screen web app to practice interview answers. Record (or upload) a
-spoken answer, and get LLM-graded feedback on **delivery** — STAR structure, clarity, and
-filler-word usage — shown next to your recording and your active focus targets.
+A personal, single-user web app to practice interviews and build the ground truth behind your
+answers. Three practice modes — **Behavioral** (record/upload an answer → LLM-graded delivery:
+STAR, clarity, filler rate, level signal), **System Design** (staged interview + leveling
+report), and **Build** (timed prioritization coach) — plus a **Prep** hub that holds your
+resume, projects, story bank, target jobs, and a resume↔job-description fit analyzer.
 
-This is the **Phase 1 POC**: it proves the core loop (capture → transcribe → analyze →
-human-readable feedback). History, trend charts, and the auto-deriving focus-target engine
-are Phase 2.
-
-## How it works
+## How it works (behavioral loop)
 
 ```
 Recorder ─▶ blob (audio|video)
@@ -18,11 +16,29 @@ Recorder ─▶ blob (audio|video)
    ─▶ merged Feedback ─▶ feedback + replay + focus targets
 ```
 
-- **Transcription:** OpenAI Whisper (`whisper-1`), called directly from the browser.
-- **Grading:** Claude Haiku 4.5 with a fixed STAR rubric via structured outputs, behind a
+- **Transcription:** OpenAI Whisper (`whisper-1`).
+- **Grading:** Claude Sonnet 4.6 with a fixed STAR rubric via structured outputs, behind a
   provider-agnostic `llmClient` (an OpenAI adapter slot is stubbed for later).
-- **No backend.** API calls go browser-direct with your own keys; keys live only in
-  `localStorage`. This is an accepted POC tradeoff — a key-protecting proxy is Phase 2.
+- **LLM gateway:** all model calls go through the Node/Express backend (`/api/llm/*`), so your
+  **OpenAI/Anthropic keys live only on the server**, never in the browser. Prompt + schema
+  construction stays client-side; the gateway just forwards.
+
+## Prep & job fit
+
+The **Prep** hub (`/prep`) is the ground-truth tier the practice modes draw on, as tabs:
+
+- **Resume** — your resume text + target level; can bootstrap skeleton projects from it.
+- **Projects** — the deep, level-aware ground truth, captured per **competency facet**
+  (hardest-part-technically, ambiguity, influence, ownership, …). Each facet is built as a
+  **conversational STAR interview** with the coach (not a textarea); in-progress drafts persist
+  to both `localStorage` and Postgres (`facet_drafts`), so a half-built answer survives reloads
+  and follows you across devices.
+- **Stories** — answer-shaped STAR stories mined from projects; the coaching grader reads them.
+- **Jobs** — paste a target job description; it's parsed once into structure (skills, seniority,
+  ATS keywords) and stored.
+- **Match** — score your resume against a stored job: a **fit score + structured gaps** (never a
+  binary), each gap tagged *Reword* / *Add a story* / *Real gap*. Generating a JD-tailored resume
+  from your projects/stories is **Phase 2** — see [`docs/PHASE2-resume-generation.md`](docs/PHASE2-resume-generation.md).
 
 ## Running it
 
@@ -60,7 +76,10 @@ durable history and media require the services above.
 
 ## Tech
 
-Vite + React + **TypeScript** (strict), Tailwind CSS, Vitest. Shared domain types live in
-`src/types.ts`; system-design types sit next to their modules in `src/{data,lib}/sysdesign`.
-Analyzers conform to one interface and the grading criteria are data (`src/data/criteria.ts`),
-so swapping STAR for another framework — or the LLM provider — needs no UI changes.
+Vite + React + **TypeScript** (strict), Tailwind CSS, Vitest. Backend: Node/Express +
+Postgres + MinIO, a modular monolith where each feature is a router under `/api`
+(`sessions`, `assets`, `llm`, `profile`, `projects`, `stories`, `facet-drafts`, `jobs`).
+Shared domain types live in `src/types.ts`; system-design types sit next to their modules in
+`src/{data,lib}/sysdesign`. Analyzers conform to one interface and the prompts/rubrics are
+**data** (`src/data/criteria.ts`, `src/data/resumeCriteria.ts`), so swapping STAR for another
+framework — or adding the Phase-2 resume generator — needs no UI/analyzer rework.

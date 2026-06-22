@@ -3,7 +3,7 @@
 **Type:** Living working doc — guides what to build/cut next. Not a portfolio piece.
 **User:** One person (me). Single-user, private practice.
 **North star:** *I get measurably better at interviews over repeated reps.*
-**Last updated:** 2026-06-21
+**Last updated:** 2026-06-21 (added Prep ground-truth hub + resume↔JD fit; backend LLM gateway shipped)
 
 > This doc owns **why** and **what**. The **how** (stack, routes, models) lives in
 > the README and the code — don't duplicate it here.
@@ -54,7 +54,10 @@ time** — without it, "am I improving?" is unanswerable, which is the whole poi
 
 ## 3. Non-goals (what I will NOT build)
 
-- Not a job tracker, resume builder, or scheduler.
+- Not a job tracker or scheduler.
+- **Revised 2026-06-21:** resume work *is now in scope*, but narrowly — a resume↔JD **fit
+  analyzer** (shipped) and a JD-targeted **generator grounded in my own projects/stories**
+  (Phase 2). A generic, ungrounded "resume builder" remains a non-goal.
 - Not multiplayer / peer-mock — single-user only.
 - Build mode does **not** run or grade my code — it coaches the *plan*.
 - No public launch / multi-user auth until the personal loop is proven valuable.
@@ -106,7 +109,7 @@ The high-signal section. What was chosen, and what we gave up:
 |----------|-----|---------------------|
 | Build mode coaches the *plan*, doesn't run code | Keeps a rep to ~15 min of prioritization practice, not a build harness | Doesn't verify the code actually works |
 | Rubrics as data, not prose in prompts | Swap frameworks/levels in one place; same rubric drives interviewer + grading | Someone must author & maintain rubric quality |
-| Browser-direct keys (POC) → server proxy (Phase 2) | Ship the loop fast first | Keys in localStorage until the backend lands |
+| Server LLM gateway, keys server-side (shipped) | Keys never in the browser; one chokepoint for usage/cost | A backend must run for any LLM call |
 | Sonnet for turns, Opus for the final report | Pay for top judgment only where it matters most | Higher cost/latency on the report |
 | localStorage fallback when backend offline | Reps never blocked by infra | Two sources of truth to reconcile |
 
@@ -120,7 +123,11 @@ defend is one I should revisit.*
 1. **Trend tracking** — make improvement visible. Highest leverage; unlocks the
    north star. **(P0)**
 2. Auto-derived focus targets from history. **(P1)**
-3. Backend key proxy fully default. **(P1)**
+3. **JD-targeted resume generation (Phase 2)** — grounded in my projects/stories, fed back
+   through the resume↔JD fit score. See [`docs/PHASE2-resume-generation.md`](docs/PHASE2-resume-generation.md). **(P1)**
+
+*Done since last revision: server LLM gateway (keys server-side); conversational STAR facet
+capture for projects, with drafts durable to Postgres; resume↔JD fit analysis (Jobs + Match).*
 
 ---
 
