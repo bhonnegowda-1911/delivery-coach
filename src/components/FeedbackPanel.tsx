@@ -5,6 +5,7 @@ import type {
   FeedbackBeat,
   LevelSignal as LevelSignalData,
   Severity,
+  StoryFidelity as StoryFidelityData,
 } from '../types'
 
 const SEVERITY_STYLE: Record<Severity, string> = {
@@ -188,13 +189,56 @@ function DeliveryHabits({ habits }: { habits: DeliveryHabitsData | null }) {
   )
 }
 
+function StoryFidelity({ fidelity }: { fidelity: StoryFidelityData | null }) {
+  if (!fidelity) return null
+  const groups: Array<{ label: string; items: string[] }> = [
+    { label: 'You undersold', items: fidelity.underSold || [] },
+    { label: 'Impact you left out', items: fidelity.omittedImpact || [] },
+    { label: 'Said “we” for your own work', items: fidelity.misattributedToTeam || [] },
+  ].filter((g) => g.items.length > 0)
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-violet-900">Content coaching</h3>
+        {fidelity.matchedStoryTitle && (
+          <span className="rounded-full bg-violet-600 px-3 py-0.5 text-xs font-semibold text-white">
+            {fidelity.matchedStoryTitle}
+          </span>
+        )}
+      </div>
+      <p className="mt-0.5 text-xs text-violet-500">How your telling compared to your real story.</p>
+      {fidelity.note && <p className="mt-3 text-sm text-violet-900/90">{fidelity.note}</p>}
+
+      {groups.map((g) => (
+        <div key={g.label} className="mt-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-violet-700">{g.label}</div>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-violet-900/85">
+            {g.items.map((it, i) => (
+              <li key={i}>{it}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      {fidelity.betterExampleTitle && (
+        <div className="mt-4 border-t border-violet-200 pt-3 text-sm text-violet-900/90">
+          <span className="font-semibold">Stronger example for this question: </span>
+          {fidelity.betterExampleTitle}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FeedbackPanel({ feedback }: { feedback: Feedback | null }) {
   if (!feedback) return null
-  const { conforms, summary, scores, level, habits, beats, filler, notes } = feedback
+  const { conforms, summary, scores, level, habits, beats, filler, notes, storyFidelity } = feedback
 
   return (
     <div className="space-y-5">
       <LevelSignal level={level} />
+      <StoryFidelity fidelity={storyFidelity} />
       <DeliveryHabits habits={habits} />
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
