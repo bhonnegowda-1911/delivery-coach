@@ -223,7 +223,7 @@ export default function InterviewReviewView({ onNeedKeys }: { onNeedKeys?: () =>
         <ReviewTranscript
           assetId={result.assetId}
           transcript={result.transcript}
-          utterances={result.utterances}
+          utterances={result.utterances ?? []}
           candidateSpeaker={result.review.candidateSpeaker}
           audioRef={audioRef}
         />

@@ -24,13 +24,14 @@ function speakerLabel(speaker: number, candidateSpeaker: number | null | undefin
 export default function ReviewTranscript({
   assetId,
   transcript,
-  utterances,
+  // Reviews saved before diarization existed have no utterances — default so old records don't crash.
+  utterances = [],
   candidateSpeaker,
   audioRef,
 }: {
   assetId: string | null
   transcript: Transcript
-  utterances: DiarizedUtterance[]
+  utterances?: DiarizedUtterance[]
   candidateSpeaker?: number | null
   audioRef: RefObject<HTMLAudioElement>
 }) {
