@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { CheckCircle2, AlertTriangle, TrendingUp, ListChecks } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, TrendingUp, ListChecks, Play } from 'lucide-react'
 import type { HireSignal, InterviewReview, RoundType, Score } from '../../types'
 import { stagger, staggerItem } from '../../lib/ui/motion'
 
@@ -52,16 +52,25 @@ function formatDuration(sec: number | null): string | null {
   return `${m} min`
 }
 
+function clock(sec: number): string {
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 export default function ReviewReport({
   review,
   durationSec,
   label,
   diarized,
+  onSeek,
 }: {
   review: InterviewReview
   durationSec?: number | null
   label?: string | null
   diarized?: boolean
+  /** When provided, exchanges with a timestamp show a play button that seeks the recording. */
+  onSeek?: (sec: number) => void
 }) {
   const roundLabel = ROUND_LABEL[review.roundType] || 'Interview'
   const dur = formatDuration(durationSec ?? null)
@@ -171,8 +180,25 @@ export default function ReviewReport({
                   <span className="min-w-0">
                     <span className="text-stone-400">Q{i + 1}.</span> {ex.question}
                   </span>
-                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold text-white ${scoreBar(ex.score)}`}>
-                    {ex.score}/5
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {onSeek && ex.atSec != null && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onSeek(ex.atSec as number)
+                        }}
+                        title="Play from here"
+                        className="inline-flex items-center gap-1 rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-600 hover:bg-terracotta-100 hover:text-terracotta-700"
+                      >
+                        <Play size={10} aria-hidden /> {clock(ex.atSec)}
+                      </span>
+                    )}
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold text-white ${scoreBar(ex.score)}`}>
+                      {ex.score}/5
+                    </span>
                   </span>
                 </summary>
                 <div className="mt-3 space-y-2.5 border-t border-stone-100 pt-3 text-sm">

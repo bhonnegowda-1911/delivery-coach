@@ -75,6 +75,11 @@ Do two things, in order:
      honest assessment of how it landed, a 1–5 score, and a concrete BETTER answer for THIS question
      (what a strong candidate would have said). Skip pure small talk. If it was one long problem
      (coding/design), break it into the natural sub-questions / decision points instead.
+
+TIMESTAMPS: transcript lines may be tagged "[Ns]" where N is the whole number of seconds into the
+recording. When they are, set each exchange's "atSec" to the N of the line where the interviewer
+asked that question, and set "candidateSpeaker" to the Speaker number that answers at length about
+their own experience. When the transcript has no [Ns] tags, OMIT atSec and candidateSpeaker.
    - strengths: what the candidate genuinely did well (specific, tied to what they said).
    - improvements: the highest-leverage, specific things to fix next time.
    - redFlags: moments that would worry an interviewer — vague or unsupported claims, wrong technical
@@ -119,6 +124,11 @@ export const INTERVIEW_REVIEW_SCHEMA: JsonSchema = {
       type: 'string',
       description: 'Two or three sentences on how the interview went overall.',
     },
+    candidateSpeaker: {
+      type: 'integer',
+      description:
+        'Speaker number that is the candidate. Include ONLY when the transcript is diarized (has "Speaker N:" labels); otherwise omit.',
+    },
     dimensions: {
       type: 'array',
       description: '4–6 competency dimensions fitting the detected round, each scored 1–5.',
@@ -145,6 +155,11 @@ export const INTERVIEW_REVIEW_SCHEMA: JsonSchema = {
           assessment: { type: 'string', description: 'Honest read of how the answer landed.' },
           score: { type: 'integer', enum: SCORE_ENUM, description: '1 (weak) to 5 (strong) answer.' },
           betterAnswer: { type: 'string', description: 'A concrete stronger answer for this question.' },
+          atSec: {
+            type: 'integer',
+            description:
+              'Seconds into the recording where this question was asked, from a "[Ns]" tag. Include ONLY when the transcript is timestamped; otherwise omit.',
+          },
         },
         required: ['question', 'answerSummary', 'assessment', 'score', 'betterAnswer'],
         additionalProperties: false,

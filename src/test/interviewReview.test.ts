@@ -188,6 +188,20 @@ describe('reviewInterview', () => {
     expect(req.user as string).toContain('payments migration')
     expect(req.user as string).toContain('Acme — HM round')
   })
+
+  it('feeds a timestamped, speaker-labeled transcript when diarized utterances are provided', async () => {
+    await reviewInterview({
+      transcript: STITCHED_TRANSCRIPT,
+      utterances: [
+        { speaker: 0, start: 12, end: 15, text: 'Tell me about a project you led.' },
+        { speaker: 1, start: 16, end: 40, text: 'I led the payments migration.' },
+      ],
+    })
+    const req = chatStructuredMock.mock.calls[0][0] as Record<string, unknown>
+    // [Ns] tags + Speaker labels let the grader fill per-question atSec and candidateSpeaker.
+    expect(req.user as string).toContain('[12s] Speaker 0:')
+    expect(req.user as string).toContain('[16s] Speaker 1:')
+  })
 })
 
 // ---- Full pipeline: recording → transcript → graded review session --------

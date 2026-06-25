@@ -517,6 +517,9 @@ export interface ReviewExchange {
   score: Score
   /** A stronger way to have answered this specific question. */
   betterAnswer: string
+  /** Seconds into the recording where this question was asked, for click-to-seek playback. Present
+   *  only when the graded transcript carried timestamps (diarized via Deepgram); absent otherwise. */
+  atSec?: number | null
 }
 
 export interface InterviewReview {
@@ -532,6 +535,9 @@ export interface InterviewReview {
   hireSignal: HireSignal
   /** Two or three sentences: how the interview went overall. */
   summary: string
+  /** Diarization speaker index that is the candidate (so the transcript can label "You" vs
+   *  "Interviewer"). Present only when the transcript was diarized; absent/null otherwise. */
+  candidateSpeaker?: number | null
   dimensions: ReviewDimension[]
   /** Question-by-question breakdown of the conversation. */
   exchanges: ReviewExchange[]

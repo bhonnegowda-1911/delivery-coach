@@ -15,6 +15,7 @@ import {
 import type { InterviewReviewSession } from '../../types'
 import ReviewReport from './ReviewReport'
 import ReviewStories from './ReviewStories'
+import ReviewTranscript from './ReviewTranscript'
 import EmptyState from '../../components/EmptyState'
 import { stagger, staggerItem } from '../../lib/ui/motion'
 
@@ -52,6 +53,14 @@ export default function InterviewReviewView({ onNeedKeys }: { onNeedKeys?: () =>
   const [resultId, setResultId] = useState<string | null>(null)
   const [history, setHistory] = useState<SessionSummary[]>([])
   const abortRef = useRef<AbortController | null>(null)
+  // Shared by the transcript player and the report's per-question seek buttons.
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const seek = useCallback((sec: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = sec
+    void audio.play().catch(() => {})
+  }, [])
 
   const busy = stage !== 'idle'
   // Transcription needs Deepgram (diarized) OR OpenAI (Whisper fallback); grading needs Anthropic.
@@ -139,6 +148,7 @@ export default function InterviewReviewView({ onNeedKeys }: { onNeedKeys?: () =>
       const review = await reviewInterview({
         transcript,
         label: label.trim() || null,
+        utterances,
         signal: controller.signal,
       })
 
@@ -208,6 +218,14 @@ export default function InterviewReviewView({ onNeedKeys }: { onNeedKeys?: () =>
           durationSec={result.durationSec}
           label={result.label}
           diarized={result.diarized}
+          onSeek={result.assetId ? seek : undefined}
+        />
+        <ReviewTranscript
+          assetId={result.assetId}
+          transcript={result.transcript}
+          utterances={result.utterances}
+          candidateSpeaker={result.review.candidateSpeaker}
+          audioRef={audioRef}
         />
         <ReviewStories
           transcript={result.transcript}
