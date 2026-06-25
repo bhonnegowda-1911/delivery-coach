@@ -5,7 +5,7 @@ import type { Transcript } from '../types'
 // transcript and the stored recording's asset id. Whisper extracts audio from video
 // server-side, so the same path satisfies "voice or video".
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 import { getOpenaiKey, getDeepgramKey } from './userKeys'
 import type { DiarizedUtterance } from '../types'
 const MAX_BYTES = 25 * 1024 * 1024 // Whisper request limit
@@ -69,7 +69,7 @@ export async function transcribe(
 
   let res: Response
   try {
-    res = await fetch(`${BASE}/api/llm/transcribe`, { method: 'POST', headers, body: form, signal })
+    res = await apiFetch(`/api/llm/transcribe`, { method: 'POST', headers, body: form, signal })
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e
     throw new TranscribeError('Network error reaching the transcription service.', { code: 'network' })
@@ -138,7 +138,7 @@ export async function transcribeLong(
 
   let res: Response
   try {
-    res = await fetch(`${BASE}/api/llm/transcribe-long`, { method: 'POST', headers, body: form, signal })
+    res = await apiFetch(`/api/llm/transcribe-long`, { method: 'POST', headers, body: form, signal })
   } catch (e) {
     if ((e as Error)?.name === 'AbortError') throw e
     throw new TranscribeError('Network error reaching the transcription service.', { code: 'network' })

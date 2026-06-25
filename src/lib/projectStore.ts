@@ -4,7 +4,7 @@ import { toFacets, type FacetAnswer, type FacetId, type Project } from '../data/
 // when the backend is unreachable; writes resolve to a boolean. Maps snake_case columns to the
 // camelCase domain Project.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 
 interface ProjectRow {
   id: string
@@ -29,7 +29,7 @@ function fromRow(r: ProjectRow): Project {
 
 export async function listProjects(): Promise<Project[]> {
   try {
-    const res = await fetch(`${BASE}/api/projects`)
+    const res = await apiFetch(`/api/projects`)
     if (!res.ok) return []
     return ((await res.json()) as ProjectRow[]).map(fromRow)
   } catch {
@@ -39,7 +39,7 @@ export async function listProjects(): Promise<Project[]> {
 
 export async function getProject(id: string): Promise<Project | null> {
   try {
-    const res = await fetch(`${BASE}/api/projects/${id}`)
+    const res = await apiFetch(`/api/projects/${id}`)
     if (!res.ok) return null
     return fromRow((await res.json()) as ProjectRow)
   } catch {
@@ -50,7 +50,7 @@ export async function getProject(id: string): Promise<Project | null> {
 export async function saveProject(project: Project): Promise<boolean> {
   const { id, ...body } = project
   try {
-    const res = await fetch(`${BASE}/api/projects/${id}`, {
+    const res = await apiFetch(`/api/projects/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -63,7 +63,7 @@ export async function saveProject(project: Project): Promise<boolean> {
 
 export async function deleteProject(id: string): Promise<void> {
   try {
-    await fetch(`${BASE}/api/projects/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/projects/${id}`, { method: 'DELETE' })
   } catch {
     // best effort
   }

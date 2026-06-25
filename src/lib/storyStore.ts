@@ -3,7 +3,7 @@ import type { Story } from '../data/stories'
 // Client for the story bank, backed by the server. Mirrors sessionStore: read calls return []/null
 // when the backend is unreachable and writes resolve to a boolean, so the UI degrades gracefully.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 
 // Server columns are snake_case; map to/from the camelCase domain Story.
 interface StoryRow {
@@ -40,7 +40,7 @@ export async function listStories(filter: { status?: Story['status']; theme?: st
   if (filter.theme) qs.set('theme', filter.theme)
   const suffix = qs.toString() ? `?${qs}` : ''
   try {
-    const res = await fetch(`${BASE}/api/stories${suffix}`)
+    const res = await apiFetch(`/api/stories${suffix}`)
     if (!res.ok) return []
     return ((await res.json()) as StoryRow[]).map(fromRow)
   } catch {
@@ -50,7 +50,7 @@ export async function listStories(filter: { status?: Story['status']; theme?: st
 
 export async function getStory(id: string): Promise<Story | null> {
   try {
-    const res = await fetch(`${BASE}/api/stories/${id}`)
+    const res = await apiFetch(`/api/stories/${id}`)
     if (!res.ok) return null
     return fromRow((await res.json()) as StoryRow)
   } catch {
@@ -62,7 +62,7 @@ export async function getStory(id: string): Promise<Story | null> {
 export async function saveStory(story: Story): Promise<boolean> {
   const { id, ...body } = story
   try {
-    const res = await fetch(`${BASE}/api/stories/${id}`, {
+    const res = await apiFetch(`/api/stories/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -75,7 +75,7 @@ export async function saveStory(story: Story): Promise<boolean> {
 
 export async function deleteStory(id: string): Promise<void> {
   try {
-    await fetch(`${BASE}/api/stories/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/stories/${id}`, { method: 'DELETE' })
   } catch {
     // best effort
   }

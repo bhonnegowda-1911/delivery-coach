@@ -18,8 +18,13 @@ import {
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
+import { UserButton } from '@clerk/clerk-react'
 import { pageTransition } from './lib/ui/motion'
 import { useApiKeys } from './context/ApiKeyContext'
+
+// When Clerk is configured, show the account menu (sign out, manage account). In dev without Clerk,
+// it's hidden and the app runs as the single dev user.
+const CLERK_ENABLED = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)
 import SettingsModal from './components/SettingsModal'
 import Logo from './components/Logo'
 import BehavioralView from './components/BehavioralView'
@@ -277,6 +282,7 @@ export default function App() {
               <SettingsIcon size={14} aria-hidden />
               Settings
             </button>
+            {CLERK_ENABLED && <UserButton afterSignOutUrl="/" />}
             {/* Mobile hamburger. */}
             <button
               type="button"

@@ -3,7 +3,7 @@
 // Prompt + schema construction stays here on the client; the gateway just forwards to the
 // provider and returns the parsed structured output.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 import { getAnthropicKey } from './userKeys'
 
 export type Provider = 'anthropic' | 'openai'
@@ -89,7 +89,7 @@ export async function chatStructured<T = unknown>(
   if (userKey) headers['x-anthropic-key'] = userKey
   let res: Response
   try {
-    res = await fetch(`${BASE}/api/llm/chat`, {
+    res = await apiFetch(`/api/llm/chat`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

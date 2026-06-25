@@ -24,18 +24,21 @@ assets.post('/', upload.single('file'), async (req, res) => {
 
   await putObject(objectKey, file.buffer, file.mimetype)
   await pool.query(
-    `INSERT INTO assets (id, session_id, kind, object_key, content_type, size_bytes, original_name)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, sessionId, kind, objectKey, file.mimetype, file.size, file.originalname || null],
+    `INSERT INTO assets (id, user_id, session_id, kind, object_key, content_type, size_bytes, original_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, req.userId, sessionId, kind, objectKey, file.mimetype, file.size, file.originalname || null],
   )
   res.json({ id, kind, contentType: file.mimetype, sizeBytes: file.size })
 })
 
-// GET /api/assets/:id  → stream the bytes (usable directly as an <img>/<audio>/<video> src).
+// GET /api/assets/:id  → stream the bytes (usable directly as an <img>/<audio>/<video> src). Owner
+// only — media elements can't send the Bearer token, so they authenticate via the same-origin Clerk
+// session cookie, which requireUser turns into req.userId.
 assets.get('/:id', async (req, res) => {
-  const { rows } = await pool.query(`SELECT object_key, content_type FROM assets WHERE id = $1`, [
-    req.params.id,
-  ])
+  const { rows } = await pool.query(
+    `SELECT object_key, content_type FROM assets WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.userId],
+  )
   if (!rows.length) return res.status(404).json({ error: 'not found' })
   try {
     const obj = await getObject(rows[0].object_key)
@@ -47,16 +50,19 @@ assets.get('/:id', async (req, res) => {
   }
 })
 
-// DELETE /api/assets/:id  → remove the object and the row.
+// DELETE /api/assets/:id  → remove the object and the row (owner only).
 assets.delete('/:id', async (req, res) => {
-  const { rows } = await pool.query(`SELECT object_key FROM assets WHERE id = $1`, [req.params.id])
+  const { rows } = await pool.query(`SELECT object_key FROM assets WHERE id = $1 AND user_id = $2`, [
+    req.params.id,
+    req.userId,
+  ])
   if (rows.length) {
     try {
       await deleteObject(rows[0].object_key)
     } catch {
       // object already gone — fall through and drop the row
     }
-    await pool.query(`DELETE FROM assets WHERE id = $1`, [req.params.id])
+    await pool.query(`DELETE FROM assets WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId])
   }
   res.json({ ok: true })
 })

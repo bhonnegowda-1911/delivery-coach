@@ -16,7 +16,7 @@ import type {
 // []/null when the backend is unreachable; writes resolve to a boolean. Maps snake_case columns to
 // the camelCase domain type.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 
 interface JobRow {
   id: string
@@ -118,7 +118,7 @@ export function emptyJob(id: string): JobDescription {
 
 export async function listJobs(): Promise<JobDescription[]> {
   try {
-    const res = await fetch(`${BASE}/api/jobs`)
+    const res = await apiFetch(`/api/jobs`)
     if (!res.ok) return []
     return ((await res.json()) as JobRow[]).map(fromRow)
   } catch {
@@ -128,7 +128,7 @@ export async function listJobs(): Promise<JobDescription[]> {
 
 export async function getJob(id: string): Promise<JobDescription | null> {
   try {
-    const res = await fetch(`${BASE}/api/jobs/${id}`)
+    const res = await apiFetch(`/api/jobs/${id}`)
     if (!res.ok) return null
     return fromRow((await res.json()) as JobRow)
   } catch {
@@ -139,7 +139,7 @@ export async function getJob(id: string): Promise<JobDescription | null> {
 export async function saveJob(job: JobDescription): Promise<boolean> {
   const { id, ...body } = job
   try {
-    const res = await fetch(`${BASE}/api/jobs/${id}`, {
+    const res = await apiFetch(`/api/jobs/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -152,7 +152,7 @@ export async function saveJob(job: JobDescription): Promise<boolean> {
 
 export async function deleteJob(id: string): Promise<void> {
   try {
-    await fetch(`${BASE}/api/jobs/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/jobs/${id}`, { method: 'DELETE' })
   } catch {
     // best effort
   }

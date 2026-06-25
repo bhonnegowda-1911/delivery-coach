@@ -4,7 +4,7 @@ import { DEFAULT_PROFILE, type Profile } from '../data/stories'
 // call degrades gracefully: if the backend is unreachable the app falls back to DEFAULT_PROFILE
 // (and a localStorage cache) so behavioral practice is never blocked by infra.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 const CACHE_KEY = 'deliveryCoach.profile'
 
 // The server returns snake_case columns; map to/from the camelCase domain type.
@@ -41,7 +41,7 @@ function writeCache(profile: Profile): void {
 
 export async function getProfile(): Promise<Profile> {
   try {
-    const res = await fetch(`${BASE}/api/profile`)
+    const res = await apiFetch(`/api/profile`)
     if (!res.ok) return readCache()
     const profile = fromRow((await res.json()) as ProfileRow)
     writeCache(profile)
@@ -55,7 +55,7 @@ export async function getProfile(): Promise<Profile> {
 export async function saveProfile(profile: Profile): Promise<boolean> {
   writeCache(profile)
   try {
-    const res = await fetch(`${BASE}/api/profile`, {
+    const res = await apiFetch(`/api/profile`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(profile),

@@ -334,6 +334,7 @@ async function deepgramTranscribe(buffer: Buffer, mimetype: string, key: string)
 async function storeRecordingAsset(
   file: Express.Multer.File,
   sessionId: string | null,
+  userId: string | undefined,
 ): Promise<string | null> {
   const assetId = randomUUID()
   const kind = file.mimetype.startsWith('video/') ? 'video' : 'audio'
@@ -341,9 +342,9 @@ async function storeRecordingAsset(
   try {
     await putObject(objectKey, file.buffer, file.mimetype)
     await pool.query(
-      `INSERT INTO assets (id, session_id, kind, object_key, content_type, size_bytes, original_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [assetId, sessionId, kind, objectKey, file.mimetype, file.size, file.originalname || null],
+      `INSERT INTO assets (id, user_id, session_id, kind, object_key, content_type, size_bytes, original_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [assetId, userId, sessionId, kind, objectKey, file.mimetype, file.size, file.originalname || null],
     )
     return assetId
   } catch (e) {
@@ -367,7 +368,7 @@ llm.post('/transcribe', upload.single('file'), async (req, res) => {
   }
 
   const sessionId = req.body.sessionId ? String(req.body.sessionId) : null
-  const assetId = await storeRecordingAsset(file, sessionId)
+  const assetId = await storeRecordingAsset(file, sessionId, req.userId)
 
   let result: WhisperResult
   try {
@@ -431,7 +432,7 @@ llm.post('/transcribe-long', longUpload.single('file'), async (req, res) => {
   }
 
   const sessionId = req.body.sessionId ? String(req.body.sessionId) : null
-  const assetId = await storeRecordingAsset(file, sessionId)
+  const assetId = await storeRecordingAsset(file, sessionId, req.userId)
 
   // 1) Deepgram path — diarized, single request, no chunking.
   if (deepgramKey) {

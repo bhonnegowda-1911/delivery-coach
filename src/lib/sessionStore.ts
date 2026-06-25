@@ -6,7 +6,7 @@
 // Every call degrades gracefully: if the backend is unreachable the app keeps working from
 // its in-memory / localStorage state, it just won't have durable history.
 
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 
 export type SessionKind = 'behavioral' | 'sysdesign' | 'build' | (string & {})
 export type SessionStatus = 'in_progress' | 'completed'
@@ -47,7 +47,7 @@ export async function listSessions(filter: SessionFilter = {}): Promise<SessionS
   if (filter.status) qs.set('status', filter.status)
   const suffix = qs.toString() ? `?${qs}` : ''
   try {
-    const res = await fetch(`${BASE}/api/sessions${suffix}`)
+    const res = await apiFetch(`/api/sessions${suffix}`)
     if (!res.ok) return []
     return (await res.json()) as SessionSummary[]
   } catch {
@@ -57,7 +57,7 @@ export async function listSessions(filter: SessionFilter = {}): Promise<SessionS
 
 export async function getSession<T = unknown>(id: string): Promise<SessionRecord<T> | null> {
   try {
-    const res = await fetch(`${BASE}/api/sessions/${id}`)
+    const res = await apiFetch(`/api/sessions/${id}`)
     if (!res.ok) return null
     return (await res.json()) as SessionRecord<T>
   } catch {
@@ -69,7 +69,7 @@ export async function getSession<T = unknown>(id: string): Promise<SessionRecord
 export async function saveSession<T = unknown>(input: SaveSessionInput<T>): Promise<boolean> {
   const { id, ...body } = input
   try {
-    const res = await fetch(`${BASE}/api/sessions/${id}`, {
+    const res = await apiFetch(`/api/sessions/${id}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
@@ -82,7 +82,7 @@ export async function saveSession<T = unknown>(input: SaveSessionInput<T>): Prom
 
 export async function deleteSession(id: string): Promise<void> {
   try {
-    await fetch(`${BASE}/api/sessions/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/sessions/${id}`, { method: 'DELETE' })
   } catch {
     // best effort
   }

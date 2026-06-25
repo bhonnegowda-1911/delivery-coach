@@ -1,5 +1,5 @@
 import type { GlobalPrepPlan } from '../types'
-import { API_BASE as BASE } from './api'
+import { apiFetch } from './api'
 
 // Client for the single, cross-application prep plan (one server row). Mirrors profileStore: reads
 // return null when the backend is unreachable or nothing has been generated yet; writes resolve to a
@@ -7,7 +7,7 @@ import { API_BASE as BASE } from './api'
 
 export async function getPrepPlan(): Promise<GlobalPrepPlan | null> {
   try {
-    const res = await fetch(`${BASE}/api/prep-plan`)
+    const res = await apiFetch(`/api/prep-plan`)
     if (!res.ok) return null
     return ((await res.json()) as { plan: GlobalPrepPlan | null }).plan
   } catch {
@@ -17,7 +17,7 @@ export async function getPrepPlan(): Promise<GlobalPrepPlan | null> {
 
 export async function savePrepPlan(plan: GlobalPrepPlan): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE}/api/prep-plan`, {
+    const res = await apiFetch(`/api/prep-plan`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(plan),

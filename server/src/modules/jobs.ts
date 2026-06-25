@@ -11,15 +11,21 @@ export const jobs = Router()
 const COLUMNS =
   'id, title, company, raw_text, parsed, problem_picks, coding_picks, behavioral_picks, recruiter_picks, application, prep_plan, created_at, updated_at'
 
-// GET /api/jobs → list, newest activity first.
-jobs.get('/', async (_req, res) => {
-  const { rows } = await pool.query(`SELECT ${COLUMNS} FROM job_descriptions ORDER BY updated_at DESC`)
+// GET /api/jobs → the user's jobs, newest activity first.
+jobs.get('/', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT ${COLUMNS} FROM job_descriptions WHERE user_id = $1 ORDER BY updated_at DESC`,
+    [req.userId],
+  )
   res.json(rows)
 })
 
-// GET /api/jobs/:id → full row.
+// GET /api/jobs/:id → full row (owner only).
 jobs.get('/:id', async (req, res) => {
-  const { rows } = await pool.query(`SELECT ${COLUMNS} FROM job_descriptions WHERE id = $1`, [req.params.id])
+  const { rows } = await pool.query(`SELECT ${COLUMNS} FROM job_descriptions WHERE id = $1 AND user_id = $2`, [
+    req.params.id,
+    req.userId,
+  ])
   if (!rows.length) return res.status(404).json({ error: 'not found' })
   res.json(rows[0])
 })
@@ -42,8 +48,8 @@ jobs.put('/:id', async (req, res) => {
   if (!title) return res.status(400).json({ error: 'title is required' })
   const { rows } = await pool.query(
     `INSERT INTO job_descriptions
-       (id, title, company, raw_text, parsed, problem_picks, coding_picks, behavioral_picks, recruiter_picks, application, prep_plan, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
+       (id, user_id, title, company, raw_text, parsed, problem_picks, coding_picks, behavioral_picks, recruiter_picks, application, prep_plan, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
      ON CONFLICT (id) DO UPDATE SET
        title = EXCLUDED.title,
        company = EXCLUDED.company,
@@ -56,9 +62,11 @@ jobs.put('/:id', async (req, res) => {
        application = EXCLUDED.application,
        prep_plan = EXCLUDED.prep_plan,
        updated_at = now()
+     WHERE job_descriptions.user_id = $2
      RETURNING ${COLUMNS}`,
     [
       id,
+      req.userId,
       title,
       company,
       rawText,
@@ -71,11 +79,12 @@ jobs.put('/:id', async (req, res) => {
       prepPlan ? JSON.stringify(prepPlan) : null,
     ],
   )
+  if (!rows.length) return res.status(409).json({ error: 'conflict' })
   res.json(rows[0])
 })
 
-// DELETE /api/jobs/:id
+// DELETE /api/jobs/:id (owner only)
 jobs.delete('/:id', async (req, res) => {
-  await pool.query(`DELETE FROM job_descriptions WHERE id = $1`, [req.params.id])
+  await pool.query(`DELETE FROM job_descriptions WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId])
   res.json({ ok: true })
 })

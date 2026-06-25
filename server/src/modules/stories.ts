@@ -14,8 +14,8 @@ const COLUMNS =
 // GET /api/stories?status=&theme=  → list, newest activity first.
 stories.get('/', async (req, res) => {
   const { status, theme } = req.query
-  const where: string[] = []
-  const params: unknown[] = []
+  const params: unknown[] = [req.userId]
+  const where: string[] = ['user_id = $1']
   if (typeof status === 'string' && status) {
     params.push(status)
     where.push(`status = $${params.length}`)
@@ -24,17 +24,19 @@ stories.get('/', async (req, res) => {
     params.push(theme)
     where.push(`$${params.length} = ANY(themes)`)
   }
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
   const { rows } = await pool.query(
-    `SELECT ${COLUMNS} FROM stories ${clause} ORDER BY updated_at DESC`,
+    `SELECT ${COLUMNS} FROM stories WHERE ${where.join(' AND ')} ORDER BY updated_at DESC`,
     params,
   )
   res.json(rows)
 })
 
-// GET /api/stories/:id → full row.
+// GET /api/stories/:id → full row (owner only).
 stories.get('/:id', async (req, res) => {
-  const { rows } = await pool.query(`SELECT ${COLUMNS} FROM stories WHERE id = $1`, [req.params.id])
+  const { rows } = await pool.query(`SELECT ${COLUMNS} FROM stories WHERE id = $1 AND user_id = $2`, [
+    req.params.id,
+    req.userId,
+  ])
   if (!rows.length) return res.status(404).json({ error: 'not found' })
   res.json(rows[0])
 })
@@ -57,8 +59,8 @@ stories.put('/:id', async (req, res) => {
   if (!title) return res.status(400).json({ error: 'title is required' })
   const { rows } = await pool.query(
     `INSERT INTO stories
-       (id, title, role_ref, star, impact, themes, true_ceiling_level, source_session_ids, status, project_id, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+       (id, user_id, title, role_ref, star, impact, themes, true_ceiling_level, source_session_ids, status, project_id, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
      ON CONFLICT (id) DO UPDATE SET
        title = EXCLUDED.title,
        role_ref = EXCLUDED.role_ref,
@@ -70,9 +72,11 @@ stories.put('/:id', async (req, res) => {
        status = EXCLUDED.status,
        project_id = EXCLUDED.project_id,
        updated_at = now()
+     WHERE stories.user_id = $2
      RETURNING ${COLUMNS}`,
     [
       id,
+      req.userId,
       title,
       roleRef,
       JSON.stringify(star),
@@ -84,11 +88,12 @@ stories.put('/:id', async (req, res) => {
       projectId,
     ],
   )
+  if (!rows.length) return res.status(409).json({ error: 'conflict' })
   res.json(rows[0])
 })
 
-// DELETE /api/stories/:id
+// DELETE /api/stories/:id (owner only)
 stories.delete('/:id', async (req, res) => {
-  await pool.query(`DELETE FROM stories WHERE id = $1`, [req.params.id])
+  await pool.query(`DELETE FROM stories WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId])
   res.json({ ok: true })
 })

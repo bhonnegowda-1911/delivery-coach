@@ -7,21 +7,22 @@ import { pool } from '../db.js'
 
 export const prepPlan = Router()
 
-// GET /api/prep-plan → { plan: GlobalPrepPlan | null }
-prepPlan.get('/', async (_req, res) => {
-  const { rows } = await pool.query(`SELECT payload FROM prep_plan WHERE id = 'default'`)
+// GET /api/prep-plan → { plan: GlobalPrepPlan | null } for this user.
+prepPlan.get('/', async (req, res) => {
+  const { rows } = await pool.query(`SELECT payload FROM prep_plan WHERE user_id = $1`, [req.userId])
   res.json({ plan: rows[0]?.payload ?? null })
 })
 
-// PUT /api/prep-plan → upsert the plan payload, returns { plan }.
+// PUT /api/prep-plan → upsert this user's plan payload, returns { plan }. One row per user.
 prepPlan.put('/', async (req, res) => {
+  const uid = req.userId
   const plan = req.body ?? null
   const { rows } = await pool.query(
-    `INSERT INTO prep_plan (id, payload, updated_at)
-     VALUES ('default', $1, now())
-     ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()
+    `INSERT INTO prep_plan (id, user_id, payload, updated_at)
+     VALUES ($1, $1, $2, now())
+     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()
      RETURNING payload`,
-    [plan === null ? null : JSON.stringify(plan)],
+    [uid, plan === null ? null : JSON.stringify(plan)],
   )
   res.json({ plan: rows[0]?.payload ?? null })
 })

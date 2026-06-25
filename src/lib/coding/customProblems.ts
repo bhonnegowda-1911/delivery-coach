@@ -1,5 +1,5 @@
 import type { CodingProblem } from '../../data/coding/problems'
-import { API_BASE as BASE } from '../api'
+import { apiFetch } from '../api'
 
 // On-demand coding problems the user generates themselves. The curated library
 // (src/data/coding/problems.ts) is static and authored by hand; these are LLM-authored additions that
@@ -38,7 +38,7 @@ function cache(list: CodingProblem[]): void {
 export async function hydrateCustomCodingProblems(): Promise<CodingProblem[]> {
   const local = loadCustomCodingProblems()
   try {
-    const res = await fetch(`${BASE}/api/custom-problems?kind=coding`)
+    const res = await apiFetch(`/api/custom-problems?kind=coding`)
     if (!res.ok) return local
     const server = (await res.json()) as CodingProblem[]
     if (!Array.isArray(server)) return local
@@ -55,7 +55,7 @@ export async function hydrateCustomCodingProblems(): Promise<CodingProblem[]> {
 /** Add (or replace by id) a generated problem, newest first: cache synchronously, upsert to Postgres. */
 export function addCustomCodingProblem(problem: CodingProblem): void {
   cache([problem, ...loadCustomCodingProblems().filter((p) => p.id !== problem.id)])
-  void fetch(`${BASE}/api/custom-problems/${problem.id}`, {
+  void apiFetch(`/api/custom-problems/${problem.id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ kind: 'coding', problem }),
@@ -64,5 +64,5 @@ export function addCustomCodingProblem(problem: CodingProblem): void {
 
 export function deleteCustomCodingProblem(id: string): void {
   cache(loadCustomCodingProblems().filter((p) => p.id !== id))
-  void fetch(`${BASE}/api/custom-problems/${id}`, { method: 'DELETE' }).catch(() => {})
+  void apiFetch(`/api/custom-problems/${id}`, { method: 'DELETE' }).catch(() => {})
 }

@@ -1,5 +1,5 @@
 import type { Problem } from '../../data/sysdesign/problems'
-import { API_BASE as BASE } from '../api'
+import { apiFetch } from '../api'
 
 // On-demand system-design problems the user generates themselves. Mirrors
 // src/lib/coding/customProblems.ts: the curated library is static and hand-authored, while these are
@@ -38,7 +38,7 @@ function cache(list: Problem[]): void {
 export async function hydrateCustomSysDesignProblems(): Promise<Problem[]> {
   const local = loadCustomSysDesignProblems()
   try {
-    const res = await fetch(`${BASE}/api/custom-problems?kind=sysdesign`)
+    const res = await apiFetch(`/api/custom-problems?kind=sysdesign`)
     if (!res.ok) return local
     const server = (await res.json()) as Problem[]
     if (!Array.isArray(server)) return local
@@ -55,7 +55,7 @@ export async function hydrateCustomSysDesignProblems(): Promise<Problem[]> {
 /** Add (or replace by id) a generated problem, newest first: cache synchronously, upsert to Postgres. */
 export function addCustomSysDesignProblem(problem: Problem): void {
   cache([problem, ...loadCustomSysDesignProblems().filter((p) => p.id !== problem.id)])
-  void fetch(`${BASE}/api/custom-problems/${problem.id}`, {
+  void apiFetch(`/api/custom-problems/${problem.id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ kind: 'sysdesign', problem }),
@@ -64,5 +64,5 @@ export function addCustomSysDesignProblem(problem: Problem): void {
 
 export function deleteCustomSysDesignProblem(id: string): void {
   cache(loadCustomSysDesignProblems().filter((p) => p.id !== id))
-  void fetch(`${BASE}/api/custom-problems/${id}`, { method: 'DELETE' }).catch(() => {})
+  void apiFetch(`/api/custom-problems/${id}`, { method: 'DELETE' }).catch(() => {})
 }

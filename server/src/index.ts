@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { initSchema } from './db.js'
 import { ensureBucket } from './storage.js'
+import { authEnabled, clerk, requireUser } from './auth.js'
 import { sessions } from './modules/sessions.js'
 import { assets } from './modules/assets.js'
 import { llm, providerStatus } from './modules/llm.js'
@@ -21,19 +22,26 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '4mb' }))
 
+// Public (no auth): liveness + client config. authEnabled tells the frontend whether to show a login
+// wall; providers tells it which BYOK keys the server carries as a fallback.
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
-app.get('/api/config', (_req, res) => res.json({ providers: providerStatus() }))
+app.get('/api/config', (_req, res) => res.json({ providers: providerStatus(), authEnabled }))
 
-app.use('/api/sessions', sessions)
-app.use('/api/assets', assets)
-app.use('/api/llm', llm)
-app.use('/api/profile', profile)
-app.use('/api/stories', stories)
-app.use('/api/projects', projects)
-app.use('/api/facet-drafts', facetDrafts)
-app.use('/api/jobs', jobs)
-app.use('/api/custom-problems', customProblems)
-app.use('/api/prep-plan', prepPlan)
+// Verify Clerk tokens on every request (only when configured). requireUser then gates each feature
+// router and stamps req.userId, which the modules scope all queries by. In dev without Clerk, this is
+// skipped and requireUser falls back to the single dev user.
+if (authEnabled) app.use(clerk)
+
+app.use('/api/sessions', requireUser, sessions)
+app.use('/api/assets', requireUser, assets)
+app.use('/api/llm', requireUser, llm)
+app.use('/api/profile', requireUser, profile)
+app.use('/api/stories', requireUser, stories)
+app.use('/api/projects', requireUser, projects)
+app.use('/api/facet-drafts', requireUser, facetDrafts)
+app.use('/api/jobs', requireUser, jobs)
+app.use('/api/custom-problems', requireUser, customProblems)
+app.use('/api/prep-plan', requireUser, prepPlan)
 
 // Surface async handler errors as JSON rather than crashing the process.
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

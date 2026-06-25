@@ -1,9 +1,10 @@
 // Client for media assets (voice recordings, system-design images/video, later resume/JD
 // files). Bytes are proxied through the backend to object storage (MinIO); we keep only the
 // returned asset id and reference it from a session payload. `assetUrl(id)` is usable
-// directly as an <img>/<audio>/<video> src.
+// directly as an <img>/<audio>/<video> src — those requests authenticate via the same-origin
+// Clerk session cookie, since element src can't carry the Bearer token.
 
-import { API_BASE as BASE } from './api'
+import { API_BASE, apiFetch } from './api'
 
 export type AssetKind = 'audio' | 'video' | 'image' | 'pdf' | 'file'
 
@@ -27,7 +28,7 @@ export async function uploadAsset(blob: Blob, meta: UploadMeta = {}): Promise<Up
   if (meta.kind) form.append('kind', meta.kind)
   if (meta.sessionId) form.append('sessionId', meta.sessionId)
   try {
-    const res = await fetch(`${BASE}/api/assets`, { method: 'POST', body: form })
+    const res = await apiFetch(`/api/assets`, { method: 'POST', body: form })
     if (!res.ok) return null
     return (await res.json()) as UploadedAsset
   } catch {
@@ -37,12 +38,12 @@ export async function uploadAsset(blob: Blob, meta: UploadMeta = {}): Promise<Up
 
 /** A streamable URL for an asset (served by the backend from object storage). */
 export function assetUrl(id: string): string {
-  return `${BASE}/api/assets/${id}`
+  return `${API_BASE}/api/assets/${id}`
 }
 
 export async function deleteAsset(id: string): Promise<void> {
   try {
-    await fetch(`${BASE}/api/assets/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/assets/${id}`, { method: 'DELETE' })
   } catch {
     // best effort
   }

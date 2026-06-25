@@ -141,6 +141,28 @@ CREATE TABLE IF NOT EXISTS prep_plan (
   payload    jsonb,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Multi-user scoping: every personal row is owned by a user (Clerk user id, stored as text). Added
+-- additively; existing rows are NULL until backfilled to an owner (see scripts/backfill-user.ts).
+-- custom_problems is intentionally NOT scoped — it's shared, LLM-authored problem content, not
+-- personal data.
+ALTER TABLE sessions          ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE assets            ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE stories           ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE projects          ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE facet_drafts      ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE job_descriptions  ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE profile           ADD COLUMN IF NOT EXISTS user_id text;
+ALTER TABLE prep_plan         ADD COLUMN IF NOT EXISTS user_id text;
+
+CREATE INDEX IF NOT EXISTS sessions_user_idx  ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS assets_user_idx    ON assets (user_id);
+CREATE INDEX IF NOT EXISTS stories_user_idx   ON stories (user_id);
+CREATE INDEX IF NOT EXISTS projects_user_idx  ON projects (user_id);
+CREATE INDEX IF NOT EXISTS jobs_user_idx      ON job_descriptions (user_id);
+-- profile and prep_plan are one row per user, so the upserts key on user_id.
+CREATE UNIQUE INDEX IF NOT EXISTS profile_user_uidx   ON profile (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS prep_plan_user_uidx ON prep_plan (user_id);
 `
 
 /** Create tables if they don't exist. No migration tool yet — additive DDL only. */

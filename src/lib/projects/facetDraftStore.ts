@@ -8,7 +8,7 @@ import type { FacetBeats, FacetMessage } from './facetChat'
 // the draft is then deleted from both. Writes are fire-and-forget to the backend; the cache is the
 // synchronous source the UI reads, and hydrateProjectDrafts refreshes it from the server on open.
 
-import { API_BASE as BASE } from '../api'
+import { apiFetch } from '../api'
 const PREFIX = 'deliveryCoach.facetDraft'
 
 export interface FacetDraft {
@@ -69,7 +69,7 @@ function removeCachedProject(projectId: string): void {
 /** Pull every saved draft for a project from the server into the local cache. Call before reading. */
 export async function hydrateProjectDrafts(projectId: string): Promise<void> {
   try {
-    const res = await fetch(`${BASE}/api/facet-drafts/${projectId}`)
+    const res = await apiFetch(`/api/facet-drafts/${projectId}`)
     if (!res.ok) return
     const rows = (await res.json()) as Array<{ facet_id: FacetId; payload: FacetDraft }>
     for (const r of rows) {
@@ -83,7 +83,7 @@ export async function hydrateProjectDrafts(projectId: string): Promise<void> {
 /** Save the in-progress draft: cache synchronously, then upsert to Postgres (best effort). */
 export function saveFacetDraft(projectId: string, facetId: FacetId, draft: FacetDraft): void {
   cacheDraft(projectId, facetId, draft)
-  void fetch(`${BASE}/api/facet-drafts/${projectId}/${facetId}`, {
+  void apiFetch(`/api/facet-drafts/${projectId}/${facetId}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(draft),
@@ -93,11 +93,11 @@ export function saveFacetDraft(projectId: string, facetId: FacetId, draft: Facet
 /** Drop one draft (on Accept or Discard) from both cache and Postgres. */
 export function clearFacetDraft(projectId: string, facetId: FacetId): void {
   removeCached(projectId, facetId)
-  void fetch(`${BASE}/api/facet-drafts/${projectId}/${facetId}`, { method: 'DELETE' }).catch(() => {})
+  void apiFetch(`/api/facet-drafts/${projectId}/${facetId}`, { method: 'DELETE' }).catch(() => {})
 }
 
 /** Drop every draft for a project — call when the project is deleted. */
 export function clearProjectDrafts(projectId: string): void {
   removeCachedProject(projectId)
-  void fetch(`${BASE}/api/facet-drafts/${projectId}`, { method: 'DELETE' }).catch(() => {})
+  void apiFetch(`/api/facet-drafts/${projectId}`, { method: 'DELETE' }).catch(() => {})
 }
